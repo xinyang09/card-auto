@@ -3,6 +3,7 @@ version: '3.8'
 services:
   card-auto:
     build: .
+    container_name: card-auto-server
     ports:
       - "8000:8000"
     environment:
@@ -14,3 +15,14 @@ services:
     volumes:
       - ./redeem_history.db:/app/redeem_history.db
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

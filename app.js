@@ -618,9 +618,6 @@ function showHistoryModal() {
                   <p class="text-xs font-semibold ${isExpired ? 'text-red-500' : 'text-green-600'}">${isExpired ? '已过期' : '有效'}</p>
                 </div>
               </div>
-              <button onclick="restoreFromHistory('${item.cdk}')" class="w-full mt-3 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
-                查看详情
-              </button>
             </div>
           `;
         }).join('') : '<p class="text-center text-gray-500 py-12">暂无兑换记录</p>'}
