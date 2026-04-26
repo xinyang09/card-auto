@@ -75,6 +75,49 @@
                     </div>
                 </form>
 
+                <!-- 美国地址生成器 -->
+                <div class="mb-6 p-5 rounded-2xl bg-neutral-800/50 backdrop-blur-lg border border-neutral-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-semibold text-white">🗺️ 美国地址生成器</h3>
+                        <button onclick="generateRandomAddress()" class="px-4 py-2 bg-white text-neutral-900 rounded-lg font-semibold text-sm hover:bg-neutral-200 transition-all">
+                            生成地址
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                        <div>
+                            <p class="text-neutral-500 text-xs mb-1">姓名</p>
+                            <p id="genName" class="text-white">-</p>
+                        </div>
+                        <div>
+                            <p class="text-neutral-500 text-xs mb-1">街道地址</p>
+                            <p id="genStreet" class="text-white">-</p>
+                        </div>
+                        <div>
+                            <p class="text-neutral-500 text-xs mb-1">城市</p>
+                            <p id="genCity" class="text-white">-</p>
+                        </div>
+                        <div>
+                            <p class="text-neutral-500 text-xs mb-1">州</p>
+                            <p id="genState" class="text-white">-</p>
+                        </div>
+                        <div>
+                            <p class="text-neutral-500 text-xs mb-1">邮编</p>
+                            <p id="genZip" class="text-white">-</p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <p class="text-neutral-500 text-xs mb-1">完整地址</p>
+                            <div class="flex items-center gap-2">
+                                <p id="genFullAddress" class="text-white flex-1">-</p>
+                                <button onclick="copyToClipboard('genFullAddress')" class="p-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 transition-all">
+                                    <svg class="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 卡片视图和信息并排 -->
                 <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
                     <!-- 左侧：激活时间、过期时间、卡片倒计时 -->
@@ -247,6 +290,12 @@
             </article>
         </section>
     </main>
+
+    <footer class="fixed bottom-4 right-4 z-40">
+        <a href="javascript:void(0);" onclick="alert('客服QQ：123456789')" class="px-4 py-2 bg-neutral-800/90 backdrop-blur-lg border border-neutral-700 rounded-xl text-neutral-400 text-sm hover:bg-neutral-700 hover:text-neutral-300 transition-all">
+            💬 售后QQ：3452988562
+        </a>
+    </footer>
 
     <script src="./app.js"></script>
     <script>

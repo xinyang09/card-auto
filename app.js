@@ -485,6 +485,56 @@ function formatDate(input) {
   }).format(date);
 }
 
+// 美国地址生成器
+const US_STATES = [
+  { name: 'California', abbr: 'CA' },
+  { name: 'Texas', abbr: 'TX' },
+  { name: 'Florida', abbr: 'FL' },
+  { name: 'New York', abbr: 'NY' },
+  { name: 'Pennsylvania', abbr: 'PA' },
+  { name: 'Illinois', abbr: 'IL' },
+  { name: 'Ohio', abbr: 'OH' },
+  { name: 'Georgia', abbr: 'GA' },
+  { name: 'North Carolina', abbr: 'NC' },
+  { name: 'Michigan', abbr: 'MI' },
+  { name: 'New Jersey', abbr: 'NJ' },
+  { name: 'Virginia', abbr: 'VA' },
+  { name: 'Washington', abbr: 'WA' },
+  { name: 'Arizona', abbr: 'AZ' },
+  { name: 'Massachusetts', abbr: 'MA' },
+  { name: 'Tennessee', abbr: 'TN' },
+  { name: 'Indiana', abbr: 'IN' },
+  { name: 'Missouri', abbr: 'MO' },
+  { name: 'Maryland', abbr: 'MD' },
+  { name: 'Wisconsin', abbr: 'WI' }
+];
+
+const FIRST_NAMES = ['James', 'John', 'Robert', 'Michael', 'William', 'David', 'Richard', 'Joseph', 'Thomas', 'Charles', 'Mary', 'Patricia', 'Jennifer', 'Linda', 'Barbara', 'Elizabeth', 'Susan', 'Jessica', 'Sarah', 'Karen', 'Lisa'];
+const LAST_NAMES = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin'];
+const STREETS = ['Main St', 'Oak Ave', 'Maple Dr', 'Cedar Ln', 'Pine Rd', 'Elm St', 'Washington Blvd', 'Park Ave', 'Lake Dr', 'Hill Rd', 'River Rd', 'Forest Ave', 'Sunset Blvd', 'Valley Rd', 'Church St'];
+const CITIES = ['Los Angeles', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Jacksonville', 'Fort Worth', 'Columbus', 'Charlotte', 'San Francisco', 'Indianapolis', 'Seattle', 'Denver', 'Washington', 'Boston', 'Nashville'];
+
+function generateRandomAddress() {
+  const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+  const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+  const streetNum = Math.floor(Math.random() * 9999) + 1;
+  const street = STREETS[Math.floor(Math.random() * STREETS.length)];
+  const state = US_STATES[Math.floor(Math.random() * US_STATES.length)];
+  const zip = Math.floor(Math.random() * 90000) + 10000;
+  
+  const fullName = `${firstName} ${lastName}`;
+  const streetAddress = `${streetNum} ${street}`;
+  const city = CITIES[Math.floor(Math.random() * CITIES.length)];
+  const fullAddress = `${streetAddress}, ${city} ${state.abbr} ${zip}, US`;
+  
+  document.getElementById('genName').textContent = fullName;
+  document.getElementById('genStreet').textContent = streetAddress;
+  document.getElementById('genCity').textContent = city;
+  document.getElementById('genState').textContent = `${state.name} (${state.abbr})`;
+  document.getElementById('genZip').textContent = zip;
+  document.getElementById('genFullAddress').textContent = fullAddress;
+}
+
 function safeText(input) {
   const text = String(input || "").trim();
   return text || "-";
