@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Card Auto Preview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(10px); }
+        }
+        .glass-effect {
+            backdrop-filter: blur(16px);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-neutral-950">
+    <main class="max-w-6xl mx-auto px-4 py-10 sm:py-12">
+        
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- 左侧功能面板 -->
+            <article class="lg:col-span-2 bg-neutral-900/80 glass-effect rounded-3xl border border-neutral-800 p-6">
+                <h2 class="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-6">
+                    功能
+                </h2>
+                
+                <div class="flex flex-col gap-3">
+                    <button class="redeem-tab active px-5 py-4 rounded-2xl bg-white text-neutral-900 font-semibold tracking-wide transition-all duration-300 hover:bg-neutral-200" data-function="redeem">
+                        <span class="flex items-center gap-4">
+                            <span class="text-2xl">💳</span>
+                            <span>兑卡</span>
+                        </span>
+                    </button>
+                </div>
+            </article>
+
+            <!-- 右侧预览面板 -->
+            <article class="lg:col-span-9 glass-effect bg-neutral-900/80 rounded-3xl border border-neutral-800 p-8 relative">
+                
+                <!-- 右上角历史按钮 -->
+                <div class="absolute top-6 right-6 flex gap-3">
+                    <button onclick="showHistoryModal()" class="px-5 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-300 text-sm font-medium transition-all duration-300 hover:bg-neutral-700 hover:border-neutral-600">
+                        <span class="flex items-center gap-2">
+                            <span class="text-lg">📋</span>
+                            <span>历史</span>
+                        </span>
+                    </button>
+                </div>
+
+                <!-- 兑换表单 -->
+                <form id="redeemForm" class="relative mb-8 max-w-xl">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="flex-1 relative">
+                            <label class="block text-neutral-400 text-sm font-medium mb-3 tracking-wide">CDK</label>
+                            <input
+                                id="cdkInput"
+                                class="w-full h-14 px-5 rounded-xl bg-neutral-800 border-2 border-neutral-700 text-white text-lg focus:outline-none focus:border-neutral-500 transition-all duration-300 placeholder-neutral-600"
+                                type="text"
+                                placeholder="输入兑换码..."
+                                autocomplete="off"
+                                aria-label="兑换码输入框"
+                            />
+                        </div>
+                        <div class="flex items-end">
+                            <button id="redeemButton" class="h-14 px-10 rounded-xl bg-white text-neutral-900 text-base font-bold tracking-wide transition-all duration-300 hover:bg-neutral-200 active:scale-95" type="submit">
+                                立即兑换
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- 卡片视图和信息并排 -->
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+                    <!-- 左侧：激活时间、过期时间、卡片倒计时 -->
+                    <div class="lg:col-span-1 space-y-3">
+                        <div class="p-4 rounded-xl bg-neutral-900/60 backdrop-blur-lg border border-neutral-800">
+                            <p class="text-xs text-neutral-500 uppercase tracking-widest mb-2">激活时间</p>
+                            <p id="activatedAt" class="text-sm text-white">-</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-neutral-900/60 backdrop-blur-lg border border-neutral-800">
+                            <p class="text-xs text-neutral-500 uppercase tracking-widest mb-2">过期时间</p>
+                            <p id="expiresAt" class="text-sm text-white">-</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-neutral-800/60 backdrop-blur-lg border border-neutral-700">
+                            <p class="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">卡片倒计时</p>
+                            <p id="countdownTimer" class="text-xl font-bold font-mono text-white tracking-wider">01:00:00</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 右侧：卡片视图 -->
+                    <div class="lg:col-span-4">
+                        <section class="relative p-6 rounded-3xl bg-gradient-to-br from-neutral-800 via-neutral-900 to-black text-white overflow-hidden border border-neutral-700 h-full">
+                            <div class="absolute -bottom-20 -right-20 w-60 h-60 bg-neutral-600/20 rounded-full blur-3xl"></div>
+                            <div class="absolute -top-20 -left-20 w-40 h-40 bg-neutral-500/10 rounded-full blur-2xl"></div>
+                            
+                            <div class="relative z-10">
+                                <div class="flex justify-between items-start mb-6">
+                                    <div class="flex items-center gap-3">
+                                        <span id="categoryName" class="text-lg font-bold tracking-widest text-white">-</span>
+                                        <span id="firstAssignment" class="px-3 py-1 rounded-full bg-neutral-700 border border-neutral-600 text-xs font-bold text-neutral-300">-</span>
+                                    </div>
+                                    <svg class="w-16 h-10" viewBox="0 0 64 40" fill="none">
+                                        <rect width="64" height="40" rx="6" fill="#1A1F71"/>
+                                        <text x="8" y="26" font-family="Arial Black, sans-serif" font-size="14" font-weight="900" fill="white">VISA</text>
+                                    </svg>
+                                </div>
+                                
+                                <div class="flex justify-between items-center mb-6">
+                                    <span id="cardNumber" class="text-2xl sm:text-3xl font-bold tracking-widest text-white/90">----</span>
+                                    <button onclick="copyToClipboard('cardNumber')" class="p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 transition-all border border-neutral-700">
+                                        <svg class="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                                
+                                <div class="flex gap-8">
+                                    <div>
+                                        <p class="text-xs text-neutral-500 mb-2">有效期</p>
+                                        <div class="flex items-center gap-2">
+                                            <p id="cardExpiry" class="text-base font-bold tracking-wider">--/--</p>
+                                            <button onclick="copyToClipboard('cardExpiry')" class="p-1 rounded hover:bg-neutral-700 transition-all">
+                                                <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-neutral-500 mb-2">CVV</p>
+                                        <div class="flex items-center gap-2">
+                                            <p id="cardCvv" class="text-base font-bold tracking-wider">-</p>
+                                            <button onclick="copyToClipboard('cardCvv')" class="p-1 rounded hover:bg-neutral-700 transition-all">
+                                                <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- 联系信息和地址信息并排 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    
+                    <!-- 联系信息 -->
+                    <section class="relative p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800 backdrop-blur-lg">
+                        <h3 class="text-sm font-bold text-neutral-400 tracking-widest mb-5">
+                            联系信息
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center py-2 border-b border-neutral-800">
+                                <p class="text-sm text-neutral-500">姓名</p>
+                                <div class="flex items-center gap-2">
+                                    <p id="holderName" class="text-sm text-white">-</p>
+                                    <button onclick="copyToClipboard('holderName')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-neutral-800">
+                                <p class="text-sm text-neutral-500">手机号</p>
+                                <div class="flex items-center gap-2">
+                                    <p id="phoneNumber" class="text-sm text-white">-</p>
+                                    <button onclick="copyToClipboard('phoneNumber')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-neutral-800">
+                                <p class="text-sm text-neutral-500">验证码</p>
+                                <div class="flex items-center gap-2">
+                                    <p id="verificationCode" class="text-sm font-mono font-bold text-white">暂无验证码</p>
+                                    <button onclick="copyToClipboard('verificationCode')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                    <button id="refreshCode" class="px-3 py-1.5 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-300 text-xs font-semibold hover:bg-neutral-700 transition-all">
+                                        刷新
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="pt-4 mt-4 border-t border-neutral-800">
+                                <p id="instructionText" class="text-sm text-neutral-500 leading-relaxed">-</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 地址信息 -->
+                    <section class="relative p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800 backdrop-blur-lg">
+                        <h3 class="text-sm font-bold text-neutral-400 tracking-widest mb-5">
+                            地址信息
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-start py-2 border-b border-neutral-800">
+                                <p class="text-sm text-neutral-500">完整地址</p>
+                                <div class="flex items-center gap-2">
+                                    <p id="fullAddress" class="text-sm text-white text-right max-w-xs">-</p>
+                                    <button onclick="copyToClipboard('fullAddress')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-neutral-800">
+                                <p class="text-sm text-neutral-500">街道</p>
+                                <div class="flex items-center gap-2">
+                                    <p id="streetAddress" class="text-sm text-white">-</p>
+                                    <button onclick="copyToClipboard('streetAddress')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-neutral-800">
+                                <p class="text-sm text-neutral-500">城市 / 邮编</p>
+                                <div class="flex items-center gap-2">
+                                    <p id="cityStateZip" class="text-sm text-white">-</p>
+                                    <button onclick="copyToClipboard('cityStateZip')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-neutral-800">
+                                <p class="text-sm text-neutral-500">州</p>
+                                <div class="flex items-center gap-2">
+                                    <p id="state" class="text-sm text-white">-</p>
+                                    <button onclick="copyToClipboard('state')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center py-2">
+                                <p class="text-sm text-neutral-500">国家</p>
+                                <div class="flex items-center gap-2">
+                                    <p id="country" class="text-sm text-white">-</p>
+                                    <button onclick="copyToClipboard('country')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </article>
+        </section>
+    </main>
+
+    <script src="./app.js"></script>
+    <script>
+        // 复制到剪贴板功能
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            const text = element.textContent;
+            if (!text || text === '-' || text === '--/--') return;
+            
+            fallbackCopy(text);
+        }
+        
+        // 传统复制方法
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            textarea.setSelectionRange(0, 99999);
+            
+            try {
+                document.execCommand('copy');
+                showCopySuccess();
+            } catch (err) {
+                console.error('复制失败:', err);
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        }
+        
+        // 显示复制成功
+        function showCopySuccess() {
+            const toast = document.createElement('div');
+            toast.textContent = '✓ 已复制';
+            toast.style.cssText = 'position: fixed; bottom: 30px; right: 30px; padding: 14px 28px; background: #171717; color: white; border-radius: 12px; font-size: 14px; font-weight: 600; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); z-index: 9999; border: 1px solid #404040;';
+            
+            if (!document.getElementById('toast-styles')) {
+                const style = document.createElement('style');
+                style.id = 'toast-styles';
+                style.textContent = '@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(20px); }';
+                document.head.appendChild(style);
+            }
+            toast.style.animation = 'fadeIn 0.3s ease';
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 1500);
+        }
+    </script>
+</body>
+</html>

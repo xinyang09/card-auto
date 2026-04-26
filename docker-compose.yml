@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  card-auto:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - REAL_API_KEY=${REAL_API_KEY:-}
+      - INVITER_CODE=${INVITER_CODE:-}
+      - DEVICE_ID=${DEVICE_ID:-browser-fingerprint}
+    volumes:
+      - ./redeem_history.db:/app/redeem_history.db
+    restart: unless-stopped
