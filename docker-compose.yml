@@ -5,7 +5,7 @@ services:
     build: .
     container_name: card-auto-server
     ports:
-      - "8000:8000"
+      - "80:8000"
     environment:
       - PORT=8000
       - HOST=0.0.0.0
