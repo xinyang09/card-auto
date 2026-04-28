@@ -1271,8 +1271,8 @@ async function generatePaymentLink(token, plus) {
 
     if (shortPayurl && (checkoutUiMode === "hosted" || plus)) {
       return {
-        status: "success",
         Stripe_payurl: shortPayurl,
+        status: "success",
         openai_payurl: shortPayurl,
         checkout_ui_mode: checkoutUiMode,
         ...(checkoutSessionId
@@ -1351,8 +1351,8 @@ async function generatePaymentLink(token, plus) {
     
     // 返回结果
     return {
-      status: "success",
       Stripe_payurl: payurl,
+      status: "success",
       openai_payurl: shortPayurl,
       chatgpt_payurl: "https://chatgpt.com/checkout/openai_llc/" + checkoutSessionId
     };

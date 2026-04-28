@@ -284,8 +284,8 @@ def process_request(token, plus):
             # Hosted 模式会直接返回外部支付链接，补齐 Stripe_payurl 以兼容前端展示。
             if 短payurl and (checkout_ui_mode == "hosted" or plus):
                 result = {
-                    "status": "success",
                     "Stripe_payurl": 短payurl,
+                    "status": "success",
                     "openai_payurl": 短payurl,
                     "checkout_ui_mode": checkout_ui_mode
                 }
@@ -378,8 +378,8 @@ def process_request(token, plus):
 
             # 返回结果
             return {
-                "status": "success",
                 "Stripe_payurl": payurl,
+                "status": "success",
                 "openai_payurl": 短payurl,
                 "chatgpt_payurl": "https://chatgpt.com/checkout/openai_llc/" + checkout_session_id
             }
