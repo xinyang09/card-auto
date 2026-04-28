@@ -4,6 +4,8 @@ services:
     container_name: card-auto-server
     depends_on:
       - payment-python
+    env_file:
+      - .env
     ports:
       - "80:8000"
     environment:
