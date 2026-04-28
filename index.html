@@ -1507,6 +1507,7 @@
         const openChatgptLinkBtn = document.getElementById('openChatgptLinkBtn');
         const copyOpenaiLinkBtn = document.getElementById('copyOpenaiLinkBtn');
         const openOpenaiLinkBtn = document.getElementById('openOpenaiLinkBtn');
+        const ACTIVE_TAB_STORAGE_KEY = 'card_active_tab';
         
         let currentPlan = 'team';
         let teamPlanEnabled = true;
@@ -1524,9 +1525,27 @@
             }
             element.classList.toggle('is-active', isActive);
         }
+
+        function getStoredActiveTab() {
+            try {
+                const value = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
+                return value === 'paylink' ? 'paylink' : 'redeem';
+            } catch (error) {
+                return 'redeem';
+            }
+        }
+
+        function storeActiveTab(tabName) {
+            try {
+                localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tabName);
+            } catch (error) {
+                // Ignore storage failures and keep the current in-memory state.
+            }
+        }
         
         // 切换标签页
         function switchTab(tabName) {
+            const nextTab = tabName === 'paylink' ? 'paylink' : 'redeem';
             setSidebarTabState(redeemTab, false);
             setSidebarTabState(paylinkTab, false);
             
@@ -1538,22 +1557,24 @@
             const paylinkFormEl = document.getElementById('paylinkForm');
             
             // 显示选中的标签页内容
-            if (tabName === 'redeem') {
+            if (nextTab === 'redeem') {
                 setSidebarTabState(redeemTab, true);
                 document.querySelectorAll('.redeem-content').forEach(el => el.classList.remove('hidden'));
                 if (paylinkFormEl) paylinkFormEl.classList.add('hidden');
-            } else if (tabName === 'paylink') {
+            } else if (nextTab === 'paylink') {
                 setSidebarTabState(paylinkTab, true);
                 document.querySelectorAll('.paylink-content').forEach(el => el.classList.remove('hidden'));
                 if (paylinkFormEl) paylinkFormEl.classList.remove('hidden');
             }
+
+            storeActiveTab(nextTab);
         }
         
         redeemTab.addEventListener('click', () => switchTab('redeem'));
         paylinkTab.addEventListener('click', () => switchTab('paylink'));
         
-        // 初始化显示兑卡内容
-        switchTab('redeem');
+        // 初始化显示上次停留的页签
+        switchTab(getStoredActiveTab());
         
         // 计划选择功能
         function selectPlan(plan) {

@@ -53,6 +53,9 @@ docker-compose down
 | `PAYMENT_SERVICE_ORIGIN` | Python 支付服务地址，支持逗号分隔多个候选地址 | `http://payment-python:5001,http://card-auto-payment-python:5001` |
 | `PAYMENT_SERVICE_FETCH_RETRIES` | Node 转发到 Python 的重试次数 | `8` |
 | `PAYMENT_SERVICE_RETRY_DELAY_MS` | 每次重试间隔毫秒数 | `1000` |
+| `PAYMENT_PROXY_MODE` | Python 请求 ChatGPT 的网络策略：`direct`、`auto`、`proxy` | `direct` |
+| `PAYMENT_PROXY_TEMPLATE` | 代理模板，支持 `{random_id}` 占位符，也支持 `host:port:user:password` 原始格式 | - |
+| `PAYMENT_REQUEST_TIMEOUT_SECONDS` | Python 请求 ChatGPT 的单次超时秒数 | `12` |
 | `REAL_API_KEY` | API密钥 | - |
 | `INVITER_CODE` | 邀请码 | - |
 | `DEVICE_ID` | 设备ID | `browser-fingerprint` |
@@ -110,6 +113,27 @@ docker-compose logs --tail=200 card-auto
 - `card-auto` 会等待 `payment-python` 健康后再启动
 - 容器间固定使用 `payment-python` / `card-auto-payment-python` 两个别名互联
 - Node 转发会自动短重试，适合线上冷启动阶段
+
+如果页面一直提示代理超时，可以优先改成直连：
+
+```bash
+PAYMENT_PROXY_MODE=direct
+PAYMENT_PROXY_TEMPLATE=
+```
+
+如果你确实需要代理，再改成自动回退模式：
+
+```bash
+PAYMENT_PROXY_MODE=auto
+PAYMENT_PROXY_TEMPLATE=http://your-proxy-{random_id}:1000
+```
+
+也可以直接填写原始代理串：
+
+```bash
+PAYMENT_PROXY_MODE=proxy
+PAYMENT_PROXY_TEMPLATE=gate.kookeey.info:1000:username:password
+```
 
 ### 构建失败
 

@@ -4,9 +4,42 @@ import random
 import string
 import uuid
 import os
+from urllib.parse import quote
 from flask import Flask, request, jsonify, send_from_directory
 
 app = Flask(__name__)
+
+def load_env_file(file_path):
+    if not os.path.isfile(file_path):
+        return
+
+    with open(file_path, "r", encoding="utf-8") as env_file:
+        for raw_line in env_file:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+def read_int_env(name, default_value):
+    raw_value = os.getenv(name, str(default_value)).strip()
+
+    try:
+        return max(1, int(raw_value))
+    except (TypeError, ValueError):
+        return default_value
+
+load_env_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+
+DEFAULT_PAYMENT_PROXY_TEMPLATE = "http://1256090-2d2fc6e1:bef5bf0f-JP-{random_id}-120m@gate.kookeey.info:1000"
+PAYMENT_PROXY_MODE = os.getenv("PAYMENT_PROXY_MODE", "direct").strip().lower()
+PAYMENT_PROXY_TEMPLATE = os.getenv("PAYMENT_PROXY_TEMPLATE", "").strip()
+PAYMENT_REQUEST_TIMEOUT_SECONDS = read_int_env("PAYMENT_REQUEST_TIMEOUT_SECONDS", 12)
 
 @app.after_request
 def add_cors_headers(response):
@@ -54,14 +87,98 @@ def extract_upstream_message(response_data, status_code):
 
     return f"上游接口返回失败 ({status_code})"
 
-def process_request(token, plus):
-    # 生成随机8位字符
+def create_tls_session():
+    client = tls_client.Session(
+        client_identifier="chrome130",
+        random_tls_extension_order=True
+    )
+    client.cookies_enabled = True
+    client.timeout_seconds = PAYMENT_REQUEST_TIMEOUT_SECONDS
+    return client
+
+def build_proxy_url():
+    template = PAYMENT_PROXY_TEMPLATE or DEFAULT_PAYMENT_PROXY_TEMPLATE
+
+    if PAYMENT_PROXY_MODE == "direct":
+        return None
+
     random_id = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    resolved_template = template.replace("{random_id}", random_id)
+    return normalize_proxy_url(resolved_template)
 
-    # 构建代理URL
-    proxy_url = f"http://1256090-2d2fc6e1:bef5bf0f-JP-{random_id}-120m@gate.kookeey.info:1000"
-    print(f"使用代理IP: {proxy_url}")
+def normalize_proxy_url(raw_value):
+    value = str(raw_value or "").strip()
+    if not value:
+        return None
 
+    if "://" in value:
+        return value
+
+    if "@" in value:
+        return f"http://{value}"
+
+    parts = value.split(":", 3)
+    if len(parts) == 4:
+        host, port, username, password = parts
+        host = host.strip()
+        port = port.strip()
+        username = quote(username.strip(), safe="")
+        password = quote(password.strip(), safe="")
+
+        if host and port and username and password:
+            return f"http://{username}:{password}@{host}:{port}"
+
+    return value
+
+def get_transport_candidates():
+    proxy_url = build_proxy_url()
+    candidates = []
+
+    if PAYMENT_PROXY_MODE == "proxy":
+        if proxy_url:
+            candidates.append({"label": "代理", "proxy": proxy_url})
+    elif PAYMENT_PROXY_MODE == "auto":
+        if proxy_url:
+            candidates.append({"label": "代理", "proxy": proxy_url})
+        candidates.append({"label": "直连", "proxy": None})
+    else:
+        candidates.append({"label": "直连", "proxy": None})
+
+    if not candidates:
+        candidates.append({"label": "直连", "proxy": None})
+
+    return candidates
+
+def send_with_transport(client, method, url, transport, **kwargs):
+    request_kwargs = dict(kwargs)
+    proxy = transport.get("proxy")
+
+    if proxy:
+        request_kwargs["proxy"] = proxy
+
+    request_method = getattr(client, method)
+    return request_method(url, **request_kwargs)
+
+def build_transport_error_message(errors):
+    if not errors:
+        return "支付请求失败，请检查网络连接。"
+
+    attempted = "、".join(error["label"] for error in errors)
+    joined_message = " ".join(error["message"].lower() for error in errors if error.get("message"))
+    last_message = errors[-1]["message"]
+    tried_proxy = any(error.get("proxy") for error in errors)
+
+    if "timeout" in joined_message or "deadline exceeded" in joined_message:
+        if tried_proxy:
+            return f"代理连接超时，已尝试{attempted}。请检查 PAYMENT_PROXY_MODE / PAYMENT_PROXY_TEMPLATE，或改为直连。"
+        return f"连接 ChatGPT 超时，已尝试{attempted}。请检查服务器外网连通性。"
+
+    if "connection refused" in joined_message or "no route to host" in joined_message:
+        return f"网络连接失败，已尝试{attempted}。请检查服务器网络或代理配置。"
+
+    return f"支付请求失败，已尝试{attempted}。最后错误: {last_message}"
+
+def process_request(token, plus):
     # 配置请求参数
     url = "https://chatgpt.com/backend-api/payments/checkout"
     # 提交数据
@@ -95,23 +212,40 @@ def process_request(token, plus):
         "authorization": f"Bearer {token}",
         "content-type": "application/json"
     }
-    client = tls_client.Session(
-        client_identifier="chrome130",  # 使用Chrome 130的TLS指纹
-        random_tls_extension_order=True
-    )
-    client.cookies_enabled = True
+
     try:
-        client.get(
-            "https://chatgpt.com",
-            proxy=proxy_url
-        )
-        response = client.post(
-            url=url,
-            headers=headers,
-            json=data,
-            allow_redirects=True,
-            proxy=proxy_url
-        )
+        client = None
+        response = None
+        selected_transport = None
+        transport_errors = []
+
+        for transport in get_transport_candidates():
+            client = create_tls_session()
+            try:
+                print(f"尝试通过{transport['label']}访问 ChatGPT")
+                send_with_transport(client, "get", "https://chatgpt.com", transport)
+                response = send_with_transport(
+                    client,
+                    "post",
+                    url,
+                    transport,
+                    headers=headers,
+                    json=data,
+                    allow_redirects=True
+                )
+                selected_transport = transport
+                break
+            except Exception as transport_error:
+                raw_message = str(transport_error).strip() or transport_error.__class__.__name__
+                transport_errors.append({
+                    "label": transport["label"],
+                    "proxy": transport.get("proxy"),
+                    "message": raw_message
+                })
+                print(f"{transport['label']} 请求失败: {raw_message}")
+
+        if response is None or selected_transport is None or client is None:
+            return build_error(build_transport_error_message(transport_errors))
         
         # 获取响应状态码和内容
         status_code = response.status_code
@@ -147,10 +281,11 @@ def process_request(token, plus):
             print(f"publishable_key: {publishable_key}")
             print(f"checkout_ui_mode: {checkout_ui_mode}")
 
-            # Plus 当前更可能直接返回 hosted 链接，此时无需再走 Stripe init。
+            # Hosted 模式会直接返回外部支付链接，补齐 Stripe_payurl 以兼容前端展示。
             if 短payurl and (checkout_ui_mode == "hosted" or plus):
                 result = {
                     "status": "success",
+                    "Stripe_payurl": 短payurl,
                     "openai_payurl": 短payurl,
                     "checkout_ui_mode": checkout_ui_mode
                 }
@@ -170,17 +305,43 @@ def process_request(token, plus):
             stripe_url = f"https://api.stripe.com/v1/payment_pages/{checkout_session_id}/init"
             # 构建请求体
             payload = "browser_locale=zh-CN&browser_timezone=Asia%2FShanghai&elements_session_client[client_betas][0]=custom_checkout_server_updates_1&elements_session_client[client_betas][1]=custom_checkout_manual_approval_1&elements_session_client[elements_init_source]=custom_checkout&elements_session_client[referrer_host]=chatgpt.com&elements_session_client[stripe_js_id]=" + str(uuid.uuid4()) + "&elements_session_client[locale]=zh-CN&elements_session_client[is_aggregation_expected]=false&elements_options_client[stripe_js_locale]=auto&elements_options_client[saved_payment_method][enable_save]=never&elements_options_client[saved_payment_method][enable_redisplay]=never&key=" + publishable_key + "&_stripe_version=2025-03-31.basil%3B+checkout_server_update_beta%3Dv1%3B+checkout_manual_approval_preview%3Dv1"
-            # 发送Stripe API请求
-            stripe_response = client.post(
-                url=stripe_url,
-                headers={
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.87 Safari/537.36"
-                },
-                data=payload,
-                allow_redirects=True,
-                proxy=proxy_url
-            )
+            stripe_transport_errors = []
+            stripe_response = None
+
+            stripe_candidates = [selected_transport]
+            if PAYMENT_PROXY_MODE == "auto" and selected_transport.get("proxy"):
+                stripe_candidates.append({"label": "直连", "proxy": None})
+
+            for stripe_transport in stripe_candidates:
+                try:
+                    stripe_response = send_with_transport(
+                        client,
+                        "post",
+                        stripe_url,
+                        stripe_transport,
+                        headers={
+                            "Content-Type": "application/x-www-form-urlencoded",
+                            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.87 Safari/537.36"
+                        },
+                        data=payload,
+                        allow_redirects=True
+                    )
+                    break
+                except Exception as stripe_error:
+                    raw_message = str(stripe_error).strip() or stripe_error.__class__.__name__
+                    stripe_transport_errors.append({
+                        "label": stripe_transport["label"],
+                        "proxy": stripe_transport.get("proxy"),
+                        "message": raw_message
+                    })
+                    print(f"{stripe_transport['label']} Stripe 请求失败: {raw_message}")
+
+            if stripe_response is None:
+                return build_error(
+                    build_transport_error_message(stripe_transport_errors),
+                    checkout_response=response_data
+                )
+
             print(f"请求状态: {stripe_response.status_code}")
             print("Stripe Response Content:")
             print(stripe_response.text)

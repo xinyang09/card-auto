@@ -40,9 +40,14 @@ services:
       context: .
       dockerfile: Dockerfile.python
     container_name: card-auto-payment-python
+    env_file:
+      - .env
     environment:
       - PAYMENT_SERVICE_HOST=0.0.0.0
       - PAYMENT_SERVICE_PORT=5001
+      - PAYMENT_PROXY_MODE=${PAYMENT_PROXY_MODE:-direct}
+      - PAYMENT_PROXY_TEMPLATE=${PAYMENT_PROXY_TEMPLATE:-}
+      - PAYMENT_REQUEST_TIMEOUT_SECONDS=${PAYMENT_REQUEST_TIMEOUT_SECONDS:-12}
     ports:
       - "5001:5001"
     expose:

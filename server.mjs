@@ -1261,11 +1261,27 @@ async function generatePaymentLink(token, plus) {
     const checkoutSessionId = responseData.checkout_session_id;
     const publishableKey = responseData.publishable_key;
     const shortPayurl = responseData.url;
+    const checkoutUiMode = responseData.checkout_ui_mode;
     
     console.log("\n提取的信息:");
     console.log(`checkout_session_id: ${checkoutSessionId}`);
     console.log(`payurl: ${shortPayurl}`);
     console.log(`publishable_key: ${publishableKey}`);
+    console.log(`checkout_ui_mode: ${checkoutUiMode}`);
+
+    if (shortPayurl && (checkoutUiMode === "hosted" || plus)) {
+      return {
+        status: "success",
+        Stripe_payurl: shortPayurl,
+        openai_payurl: shortPayurl,
+        checkout_ui_mode: checkoutUiMode,
+        ...(checkoutSessionId
+          ? {
+              chatgpt_payurl: "https://chatgpt.com/checkout/openai_llc/" + checkoutSessionId,
+            }
+          : {}),
+      };
+    }
     
     if (!checkoutSessionId || !publishableKey) {
       return {
