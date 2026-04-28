@@ -18,6 +18,7 @@ const DEMO_MODE = String(process.env.DEMO_MODE || "").toLowerCase() === "true";
 const DEFAULT_PAYMENT_SERVICE_ORIGIN = IS_DOCKER
   ? "http://payment-python:5001,http://card-auto-payment-python:5001"
   : "http://127.0.0.1:5001";
+const SPA_ROUTE_PATHS = new Set(["/", "/redeem", "/paylink"]);
 const PAYMENT_SERVICE_ORIGINS = parseServiceOrigins(
   process.env.PAYMENT_SERVICE_ORIGIN || DEFAULT_PAYMENT_SERVICE_ORIGIN,
 );
@@ -951,8 +952,10 @@ async function notionRequest(resourcePath, options = {}) {
 }
 
 async function serveStaticFile(requestPath, response, method = "GET") {
-  const normalizedPath =
-    requestPath === "/" ? "index.html" : path.normalize(requestPath).replace(/^\/+/, "");
+  const normalizedRoutePath = normalizeRoutePath(requestPath);
+  const normalizedPath = SPA_ROUTE_PATHS.has(normalizedRoutePath)
+    ? "index.html"
+    : path.normalize(normalizedRoutePath).replace(/^\/+/, "");
   const resolvedPath = path.resolve(__dirname, normalizedPath);
 
   if (!resolvedPath.startsWith(__dirname) || !existsSync(resolvedPath)) {
@@ -964,6 +967,11 @@ async function serveStaticFile(requestPath, response, method = "GET") {
     "Content-Type": getContentType(resolvedPath),
   });
   response.end(method === "HEAD" ? undefined : file);
+}
+
+function normalizeRoutePath(requestPath) {
+  const pathname = String(requestPath || "/").trim() || "/";
+  return pathname === "/" ? "/" : pathname.replace(/\/+$/, "") || "/";
 }
 
 function getContentType(filePath) {
@@ -1129,6 +1137,11 @@ function readIntegerEnv(value, defaultValue, min = Number.NEGATIVE_INFINITY) {
   return Math.max(min, parsed);
 }
 
+function isStripeCheckoutUrl(value) {
+  const text = String(value || "").trim().toLowerCase();
+  return text.startsWith("https://checkout.stripe.com/") || text.startsWith("http://checkout.stripe.com/");
+}
+
 function parseServiceOrigins(value) {
   const raw = String(value || "").trim();
   if (!raw) {
@@ -1269,9 +1282,9 @@ async function generatePaymentLink(token, plus) {
     console.log(`publishable_key: ${publishableKey}`);
     console.log(`checkout_ui_mode: ${checkoutUiMode}`);
 
-    if (shortPayurl && (checkoutUiMode === "hosted" || plus)) {
+    if (shortPayurl && (checkoutUiMode === "hosted" || plus) && (!checkoutSessionId || !publishableKey)) {
       return {
-        Stripe_payurl: shortPayurl,
+        ...(isStripeCheckoutUrl(shortPayurl) ? { Stripe_payurl: shortPayurl } : {}),
         status: "success",
         openai_payurl: shortPayurl,
         checkout_ui_mode: checkoutUiMode,

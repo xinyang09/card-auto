@@ -1508,6 +1508,10 @@
         const copyOpenaiLinkBtn = document.getElementById('copyOpenaiLinkBtn');
         const openOpenaiLinkBtn = document.getElementById('openOpenaiLinkBtn');
         const ACTIVE_TAB_STORAGE_KEY = 'card_active_tab';
+        const TAB_ROUTE_MAP = {
+            redeem: '/redeem',
+            paylink: '/paylink',
+        };
         
         let currentPlan = 'team';
         let teamPlanEnabled = true;
@@ -1542,10 +1546,49 @@
                 // Ignore storage failures and keep the current in-memory state.
             }
         }
+
+        function normalizeTabName(tabName) {
+            return tabName === 'paylink' ? 'paylink' : 'redeem';
+        }
+
+        function getRoutePathForTab(tabName) {
+            return TAB_ROUTE_MAP[normalizeTabName(tabName)] || TAB_ROUTE_MAP.redeem;
+        }
+
+        function getTabFromPathname(pathname) {
+            const normalizedPath = String(pathname || '/').replace(/\/+$/, '') || '/';
+
+            if (normalizedPath === TAB_ROUTE_MAP.paylink) {
+                return 'paylink';
+            }
+
+            if (normalizedPath === TAB_ROUTE_MAP.redeem) {
+                return 'redeem';
+            }
+
+            return null;
+        }
+
+        function syncTabRoute(tabName, { replace = false } = {}) {
+            if (typeof window === 'undefined' || !window.history || !window.location) {
+                return;
+            }
+
+            const nextPath = getRoutePathForTab(tabName);
+            const currentUrl = new URL(window.location.href);
+
+            if (currentUrl.pathname === nextPath) {
+                return;
+            }
+
+            currentUrl.pathname = nextPath;
+            const historyMethod = replace ? 'replaceState' : 'pushState';
+            window.history[historyMethod]({ tab: normalizeTabName(tabName) }, '', currentUrl);
+        }
         
         // 切换标签页
-        function switchTab(tabName) {
-            const nextTab = tabName === 'paylink' ? 'paylink' : 'redeem';
+        function switchTab(tabName, { updateRoute = true, replaceRoute = false } = {}) {
+            const nextTab = normalizeTabName(tabName);
             setSidebarTabState(redeemTab, false);
             setSidebarTabState(paylinkTab, false);
             
@@ -1568,13 +1611,25 @@
             }
 
             storeActiveTab(nextTab);
+
+            if (updateRoute) {
+                syncTabRoute(nextTab, { replace: replaceRoute });
+            }
         }
         
         redeemTab.addEventListener('click', () => switchTab('redeem'));
         paylinkTab.addEventListener('click', () => switchTab('paylink'));
+
+        window.addEventListener('popstate', () => {
+            const routeTab = getTabFromPathname(window.location.pathname);
+            if (routeTab) {
+                switchTab(routeTab, { updateRoute: false });
+            }
+        });
         
-        // 初始化显示上次停留的页签
-        switchTab(getStoredActiveTab());
+        // 初始化显示当前路由对应的页签，并补齐显式路由。
+        const initialTab = getTabFromPathname(window.location.pathname) || getStoredActiveTab();
+        switchTab(initialTab, { replaceRoute: true });
         
         // 计划选择功能
         function selectPlan(plan) {

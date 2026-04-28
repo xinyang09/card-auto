@@ -87,6 +87,10 @@ def extract_upstream_message(response_data, status_code):
 
     return f"上游接口返回失败 ({status_code})"
 
+def is_stripe_checkout_url(value):
+    text = str(value or "").strip().lower()
+    return text.startswith("https://checkout.stripe.com/") or text.startswith("http://checkout.stripe.com/")
+
 def create_tls_session():
     client = tls_client.Session(
         client_identifier="chrome130",
@@ -281,14 +285,15 @@ def process_request(token, plus):
             print(f"publishable_key: {publishable_key}")
             print(f"checkout_ui_mode: {checkout_ui_mode}")
 
-            # Hosted 模式会直接返回外部支付链接，补齐 Stripe_payurl 以兼容前端展示。
-            if 短payurl and (checkout_ui_mode == "hosted" or plus):
+            # Hosted 模式下，只有在缺少 Stripe 初始化参数时才回退到短链。
+            if 短payurl and (checkout_ui_mode == "hosted" or plus) and (not checkout_session_id or not publishable_key):
                 result = {
-                    "Stripe_payurl": 短payurl,
                     "status": "success",
                     "openai_payurl": 短payurl,
                     "checkout_ui_mode": checkout_ui_mode
                 }
+                if is_stripe_checkout_url(短payurl):
+                    result["Stripe_payurl"] = 短payurl
                 if checkout_session_id:
                     result["chatgpt_payurl"] = "https://chatgpt.com/checkout/openai_llc/" + checkout_session_id
                 return result
