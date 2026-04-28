@@ -340,6 +340,10 @@ async function bootstrap() {
 
     applyExternalLink(tutorialLink, payload.tutorialUrl);
     applyExternalLink(buyCardLink, payload.buyCardUrl);
+    window.__cardAutoStatusPayload = payload;
+    if (typeof window.applyFrontendStatusConfig === "function") {
+      window.applyFrontendStatusConfig(payload);
+    }
   } catch (error) {
     if (modeBadge) {
       modeBadge.textContent = "Status Error";

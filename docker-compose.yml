@@ -3,7 +3,8 @@ services:
     build: .
     container_name: card-auto-server
     depends_on:
-      - payment-python
+      payment-python:
+        condition: service_healthy
     env_file:
       - .env
     ports:
@@ -11,7 +12,9 @@ services:
     environment:
       - PORT=8000
       - HOST=0.0.0.0
-      - PAYMENT_SERVICE_ORIGIN=http://payment-python:5001
+      - PAYMENT_SERVICE_ORIGIN=http://payment-python:5001,http://card-auto-payment-python:5001
+      - PAYMENT_SERVICE_FETCH_RETRIES=8
+      - PAYMENT_SERVICE_RETRY_DELAY_MS=1000
       - REAL_API_KEY=${REAL_API_KEY:-}
       - INVITER_CODE=${INVITER_CODE:-}
       - DEVICE_ID=${DEVICE_ID:-browser-fingerprint}
@@ -19,11 +22,13 @@ services:
       - ./redeem_history.db:/app/redeem_history.db
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8000/api/status').then((res)=>{if(!res.ok) process.exit(1);}).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - card-auto-net
     logging:
       driver: "json-file"
       options:
@@ -40,6 +45,8 @@ services:
       - PAYMENT_SERVICE_PORT=5001
     ports:
       - "5001:5001"
+    expose:
+      - "5001"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/')"]
@@ -47,3 +54,12 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+    networks:
+      card-auto-net:
+        aliases:
+          - payment-python
+          - card-auto-payment-python
+
+networks:
+  card-auto-net:
+    driver: bridge

@@ -659,6 +659,9 @@
         #plans {
             gap: 1rem;
         }
+        #plans.is-single-plan {
+            grid-template-columns: minmax(0, 1fr);
+        }
         .plan-card {
             position: relative;
             overflow: hidden;
@@ -1053,7 +1056,7 @@
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="plans">
                             <!-- Team 计划卡片 -->
-                            <div class="plan-card active relative overflow-hidden rounded-2xl border-2 bg-white p-5 cursor-pointer transition-all duration-300 hover:shadow-lg group" data-plan="team" onclick="selectPlan('team')">
+                            <div id="teamPlanCard" class="plan-card active relative overflow-hidden rounded-2xl border-2 bg-white p-5 cursor-pointer transition-all duration-300 hover:shadow-lg group" data-plan="team" onclick="selectPlan('team')">
                                 <div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                 <div class="plan-card-topbar absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
                                 <div class="relative z-10 flex justify-between items-start gap-4">
@@ -1480,6 +1483,8 @@
         
         // 新增的元素
         const planPreviewChip = document.getElementById('planPreviewChip');
+        const plansContainer = document.getElementById('plans');
+        const teamPlanCard = document.getElementById('teamPlanCard');
         const errorBox = document.getElementById('errorBox');
         const resultBox = document.getElementById('resultBox');
         const resultBadge = document.getElementById('resultBadge');
@@ -1504,6 +1509,7 @@
         const openOpenaiLinkBtn = document.getElementById('openOpenaiLinkBtn');
         
         let currentPlan = 'team';
+        let teamPlanEnabled = true;
         let extractedToken = null;
         let lastResult = null;
         
@@ -1551,6 +1557,10 @@
         
         // 计划选择功能
         function selectPlan(plan) {
+            if (plan === 'team' && !teamPlanEnabled) {
+                return;
+            }
+
             currentPlan = plan;
             
             document.querySelectorAll('.plan-card').forEach(card => {
@@ -1561,6 +1571,35 @@
             if (planPreviewChip) {
                 planPreviewChip.textContent = `当前方案：${plan === 'team' ? 'Team' : 'Plus'}`;
             }
+        }
+
+        function applyFrontendStatusConfig(payload = {}) {
+            teamPlanEnabled = payload.teamPlanEnabled !== false;
+
+            if (teamPlanCard) {
+                teamPlanCard.hidden = !teamPlanEnabled;
+            }
+
+            if (plansContainer) {
+                plansContainer.classList.toggle('is-single-plan', !teamPlanEnabled);
+            }
+
+            if (!teamPlanEnabled && currentPlan === 'team') {
+                selectPlan('plus');
+                return;
+            }
+
+            if (currentPlan !== 'team' && currentPlan !== 'plus') {
+                currentPlan = teamPlanEnabled ? 'team' : 'plus';
+            }
+
+            selectPlan(currentPlan);
+        }
+
+        window.applyFrontendStatusConfig = applyFrontendStatusConfig;
+
+        if (window.__cardAutoStatusPayload) {
+            applyFrontendStatusConfig(window.__cardAutoStatusPayload);
         }
         
         // Token 自动提取和验证

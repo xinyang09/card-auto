@@ -50,7 +50,9 @@ docker-compose down
 |--------|------|--------|
 | `PORT` | 服务端口 | `8000` |
 | `HOST` | 监听地址 | `0.0.0.0` |
-| `PAYMENT_SERVICE_ORIGIN` | Python 支付服务地址 | `http://payment-python:5001` |
+| `PAYMENT_SERVICE_ORIGIN` | Python 支付服务地址，支持逗号分隔多个候选地址 | `http://payment-python:5001,http://card-auto-payment-python:5001` |
+| `PAYMENT_SERVICE_FETCH_RETRIES` | Node 转发到 Python 的重试次数 | `8` |
+| `PAYMENT_SERVICE_RETRY_DELAY_MS` | 每次重试间隔毫秒数 | `1000` |
 | `REAL_API_KEY` | API密钥 | - |
 | `INVITER_CODE` | 邀请码 | - |
 | `DEVICE_ID` | 设备ID | `browser-fingerprint` |
@@ -77,6 +79,12 @@ docker-compose ps
 docker-compose logs -f
 ```
 
+只看支付链路相关日志：
+
+```bash
+docker-compose logs -f payment-python card-auto
+```
+
 ## 常见问题
 
 ### 端口被占用
@@ -88,6 +96,20 @@ lsof -i :8000
 # 或修改.env中的PORT变量后重启
 docker-compose restart
 ```
+
+### Python 支付服务不可用
+
+```bash
+docker-compose ps
+docker-compose logs --tail=200 payment-python
+docker-compose logs --tail=200 card-auto
+```
+
+先确认 `payment-python` 是 `healthy`，再确认 `card-auto` 日志里没有 `ENOTFOUND` 或 `ECONNREFUSED`。当前 compose 已配置：
+
+- `card-auto` 会等待 `payment-python` 健康后再启动
+- 容器间固定使用 `payment-python` / `card-auto-payment-python` 两个别名互联
+- Node 转发会自动短重试，适合线上冷启动阶段
 
 ### 构建失败
 

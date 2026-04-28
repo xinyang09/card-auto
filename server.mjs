@@ -10,16 +10,30 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 loadEnvFile(path.join(__dirname, ".env"));
 
+const IS_DOCKER = existsSync("/.dockerenv");
 const HOST = process.env.HOST || "127.0.0.1";
 const PORT = Number(process.env.PORT || 8000);
 const NOTION_VERSION = process.env.NOTION_VERSION || "2026-03-11";
 const DEMO_MODE = String(process.env.DEMO_MODE || "").toLowerCase() === "true";
-const DEFAULT_PAYMENT_SERVICE_ORIGIN = existsSync("/.dockerenv")
-  ? "http://payment-python:5001"
+const DEFAULT_PAYMENT_SERVICE_ORIGIN = IS_DOCKER
+  ? "http://payment-python:5001,http://card-auto-payment-python:5001"
   : "http://127.0.0.1:5001";
-const PAYMENT_SERVICE_ORIGIN = process.env.PAYMENT_SERVICE_ORIGIN || DEFAULT_PAYMENT_SERVICE_ORIGIN;
+const PAYMENT_SERVICE_ORIGINS = parseServiceOrigins(
+  process.env.PAYMENT_SERVICE_ORIGIN || DEFAULT_PAYMENT_SERVICE_ORIGIN,
+);
+const PAYMENT_SERVICE_FETCH_RETRIES = readIntegerEnv(
+  process.env.PAYMENT_SERVICE_FETCH_RETRIES,
+  IS_DOCKER ? 8 : 2,
+  1,
+);
+const PAYMENT_SERVICE_RETRY_DELAY_MS = readIntegerEnv(
+  process.env.PAYMENT_SERVICE_RETRY_DELAY_MS,
+  IS_DOCKER ? 1000 : 250,
+  0,
+);
 const TUTORIAL_URL = process.env.TUTORIAL_URL || "";
 const BUY_CARD_URL = process.env.BUY_CARD_URL || "";
+const ENABLE_TEAM_PLAN = readBooleanEnv(process.env.ENABLE_TEAM_PLAN, true);
 
 // 真实API配置
 const REAL_API_KEY = process.env.REAL_API_KEY || "";
@@ -290,6 +304,7 @@ function buildStatusPayload() {
     hint: "演示模式：支持本地演示CDK和真实API调用。",
     tutorialUrl: TUTORIAL_URL,
     buyCardUrl: BUY_CARD_URL,
+    teamPlanEnabled: ENABLE_TEAM_PLAN,
   };
 }
 
@@ -1092,6 +1107,67 @@ function stripQuotes(value) {
   return value;
 }
 
+function readBooleanEnv(value, defaultValue = false) {
+  if (value === undefined || value === null) {
+    return defaultValue;
+  }
+
+  const normalized = String(value).trim();
+  if (!normalized) {
+    return defaultValue;
+  }
+
+  return toBoolean(normalized);
+}
+
+function readIntegerEnv(value, defaultValue, min = Number.NEGATIVE_INFINITY) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (Number.isNaN(parsed)) {
+    return defaultValue;
+  }
+
+  return Math.max(min, parsed);
+}
+
+function parseServiceOrigins(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return [];
+  }
+
+  const origins = raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return origins.length ? origins : [];
+}
+
+function formatFetchError(error) {
+  const parts = [];
+  const baseMessage = error?.message ? String(error.message).trim() : "";
+  const causeCode = error?.cause?.code ? String(error.cause.code).trim() : "";
+  const causeMessage = error?.cause?.message ? String(error.cause.message).trim() : "";
+
+  if (baseMessage) {
+    parts.push(baseMessage);
+  }
+  if (causeCode && !parts.includes(causeCode)) {
+    parts.push(causeCode);
+  }
+  if (causeMessage && !parts.includes(causeMessage)) {
+    parts.push(causeMessage);
+  }
+
+  return parts.length ? parts.join(" | ") : "fetch failed";
+}
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 function toBoolean(input) {
   if (typeof input === "boolean") {
     return input;
@@ -1294,33 +1370,51 @@ function generateUUID() {
 }
 
 async function proxyPaymentLinkRequest(token, plus) {
-  const paymentServiceUrl = new URL("/api/request", PAYMENT_SERVICE_ORIGIN).toString();
+  let lastConnectionError = null;
 
-  let upstreamResponse;
-  try {
-    upstreamResponse = await fetch(paymentServiceUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify({ token, plus }),
-    });
-  } catch (error) {
-    throw new Error(`无法连接到 ${PAYMENT_SERVICE_ORIGIN} (${error.message})`);
+  for (let attempt = 1; attempt <= PAYMENT_SERVICE_FETCH_RETRIES; attempt += 1) {
+    for (const origin of PAYMENT_SERVICE_ORIGINS) {
+      const paymentServiceUrl = new URL("/api/request", origin).toString();
+
+      try {
+        const upstreamResponse = await fetch(paymentServiceUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          },
+          body: JSON.stringify({ token, plus }),
+        });
+
+        const rawBody = await upstreamResponse.text();
+        let payload;
+
+        try {
+          payload = rawBody ? JSON.parse(rawBody) : {};
+        } catch (error) {
+          throw new Error(`Python 支付服务返回了无法解析的响应 (${upstreamResponse.status})`);
+        }
+
+        return {
+          statusCode: upstreamResponse.status,
+          payload,
+        };
+      } catch (error) {
+        lastConnectionError = { origin, error };
+        console.warn(
+          `[payment-service] attempt ${attempt}/${PAYMENT_SERVICE_FETCH_RETRIES} failed for ${origin}: ${formatFetchError(error)}`,
+        );
+      }
+    }
+
+    if (attempt < PAYMENT_SERVICE_FETCH_RETRIES && PAYMENT_SERVICE_RETRY_DELAY_MS > 0) {
+      await delay(PAYMENT_SERVICE_RETRY_DELAY_MS);
+    }
   }
 
-  const rawBody = await upstreamResponse.text();
-  let payload;
-
-  try {
-    payload = rawBody ? JSON.parse(rawBody) : {};
-  } catch (error) {
-    throw new Error(`Python 支付服务返回了无法解析的响应 (${upstreamResponse.status})`);
-  }
-
-  return {
-    statusCode: upstreamResponse.status,
-    payload,
-  };
+  const attemptedOrigins = PAYMENT_SERVICE_ORIGINS.join(", ");
+  const lastDetail = lastConnectionError
+    ? `${lastConnectionError.origin} (${formatFetchError(lastConnectionError.error)})`
+    : "未知错误";
+  throw new Error(`无法连接到 Python 支付服务。已尝试: ${attemptedOrigins}。最后错误: ${lastDetail}`);
 }
