@@ -3,12 +3,14 @@
 ## 快速启动
 
 ```bash
-# 启动服务
-./start.sh
+# 构建并启动容器
+docker-compose up -d --build
 
-# 停止服务
-./stop.sh
+# 停止容器
+docker-compose down
 ```
+
+如果你是在本机直接开发，请使用 `README.md` 里的 `./start.sh` 本地启动方式，而不是 Docker。
 
 ## 手动启动
 
@@ -33,6 +35,13 @@ docker-compose logs -f
 docker-compose down
 ```
 
+启动后会同时拉起两个服务：
+
+- `card-auto`：主站与 Node API，默认访问 [http://localhost](http://localhost)
+- `payment-python`：支付链接生成服务，默认监听 [http://localhost:5001](http://localhost:5001)
+
+页面里的“生成支付链接”按钮现在会先请求主站 `/api/request`，再由 Node 服务转发到 Python 服务，因此两个容器都需要正常运行。
+
 ## 配置说明
 
 ### 环境变量
@@ -41,6 +50,7 @@ docker-compose down
 |--------|------|--------|
 | `PORT` | 服务端口 | `8000` |
 | `HOST` | 监听地址 | `0.0.0.0` |
+| `PAYMENT_SERVICE_ORIGIN` | Python 支付服务地址 | `http://payment-python:5001` |
 | `REAL_API_KEY` | API密钥 | - |
 | `INVITER_CODE` | 邀请码 | - |
 | `DEVICE_ID` | 设备ID | `browser-fingerprint` |

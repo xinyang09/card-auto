@@ -14,6 +14,12 @@ const HOST = process.env.HOST || "127.0.0.1";
 const PORT = Number(process.env.PORT || 8000);
 const NOTION_VERSION = process.env.NOTION_VERSION || "2026-03-11";
 const DEMO_MODE = String(process.env.DEMO_MODE || "").toLowerCase() === "true";
+const DEFAULT_PAYMENT_SERVICE_ORIGIN = existsSync("/.dockerenv")
+  ? "http://payment-python:5001"
+  : "http://127.0.0.1:5001";
+const PAYMENT_SERVICE_ORIGIN = process.env.PAYMENT_SERVICE_ORIGIN || DEFAULT_PAYMENT_SERVICE_ORIGIN;
+const TUTORIAL_URL = process.env.TUTORIAL_URL || "";
+const BUY_CARD_URL = process.env.BUY_CARD_URL || "";
 
 // 真实API配置
 const REAL_API_KEY = process.env.REAL_API_KEY || "";
@@ -172,6 +178,30 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (url.pathname === "/api/request" && request.method === "POST") {
+      const body = await readJsonBody(request);
+      const token = String(body?.token || "").trim();
+      const plus = Boolean(body?.plus || false);
+      
+      if (!token) {
+        return sendJson(response, 400, {
+          status: "error",
+          message: "缺少token参数"
+        });
+      }
+      
+      try {
+        const { statusCode, payload } = await proxyPaymentLinkRequest(token, plus);
+        return sendJson(response, statusCode, payload);
+      } catch (error) {
+        console.error("调用 Python 支付服务失败:", error);
+        return sendJson(response, 502, {
+          status: "error",
+          message: "Python 支付服务不可用: " + error.message
+        });
+      }
+    }
+
     if (url.pathname === "/api/redeem" && request.method === "POST") {
       const body = await readJsonBody(request);
       const cdk = String(body?.cdk || "").trim();
@@ -244,9 +274,9 @@ server.listen(PORT, HOST, async () => {
   
   const dbInitialized = await initDatabase();
   if (dbInitialized) {
-    console.log('数据库初始化成功');
+    console.log('兑换历史存储初始化成功');
   } else {
-    console.error('数据库初始化失败，但服务器继续运行');
+    console.error('兑换历史存储初始化失败，但服务器继续运行');
   }
 });
 
@@ -258,6 +288,8 @@ function buildStatusPayload() {
   return {
     mode: "demo",
     hint: "演示模式：支持本地演示CDK和真实API调用。",
+    tutorialUrl: TUTORIAL_URL,
+    buyCardUrl: BUY_CARD_URL,
   };
 }
 
@@ -648,6 +680,8 @@ function saveToDatabase(cdk, item) {
     verificationUrl: item.verificationUrl,
     instruction: item.instruction,
     isFirstAssignment: item.isFirstAssignment,
+    activatedAt: item.activatedAt,
+    expiresAt: item.expiresAt,
     redeemedAt: new Date().toISOString()
   });
 }
@@ -1068,4 +1102,225 @@ function toBoolean(input) {
   }
 
   return Boolean(input);
+}
+
+// 生成支付链接的核心功能
+import got from 'got';
+
+async function generatePaymentLink(token, plus) {
+  const randomId = generateRandomString(8);
+  const proxyUrl = `http://1256090-2d2fc6e1:bef5bf0f-JP-${randomId}-120m@gate.kookeey.info:1000`;
+  console.log(`使用代理IP: ${proxyUrl}`);
+  
+  try {
+    // 构建请求数据
+    const data = {
+      entry_point: plus ? "all_plans_pricing_modal" : "team_workspace_purchase_modal",
+      plan_name: plus ? "chatgptplusplan" : "chatgptteamplan",
+      billing_details: {
+        country: "DE",
+        currency: "EUR"
+      },
+      promo_campaign: {
+        promo_campaign_id: plus ? "plus-1-month-free" : "team-1-month-free",
+        is_coupon_from_query_param: true
+      },
+      checkout_ui_mode: plus ? "hosted" : "custom"
+    };
+    
+    if (!plus) {
+      data.cancel_url = "https://chatgpt.com/?promo_campaign=team-1-month-free#pricing";
+      data.team_plan_data = {
+        workspace_name: "Team-" + generateRandomString(8),
+        price_interval: "month",
+        seat_quantity: 5
+      };
+    }
+    
+    // 先访问主页获取 cookies
+    await got.get('https://chatgpt.com', {
+      proxy: proxyUrl,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
+      }
+    });
+    
+    // 发送第一个请求
+    const firstResponse = await got.post('https://chatgpt.com/backend-api/payments/checkout', {
+      json: data,
+      headers: {
+        "authorization": `Bearer ${token}`,
+        "content-type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+        "Accept": "application/json"
+      },
+      proxy: proxyUrl
+    });
+    
+    const statusCode = firstResponse.statusCode;
+    const content = firstResponse.body;
+    
+    console.log(`Status Code: ${statusCode}`);
+    console.log("Response Content:", content);
+    
+    if (statusCode >= 400) {
+      let responseData;
+      try {
+        responseData = JSON.parse(content);
+      } catch (e) {
+        responseData = { raw: content };
+      }
+      
+      const message = responseData.message || responseData.error || `上游接口返回失败 (${statusCode})`;
+      return {
+        status: "error",
+        message: message,
+        upstream_status: statusCode,
+        checkout_response: responseData
+      };
+    }
+    
+    // 解析响应并提取 checkout_session_id 和 publishable_key
+    const responseData = JSON.parse(content);
+    const checkoutSessionId = responseData.checkout_session_id;
+    const publishableKey = responseData.publishable_key;
+    const shortPayurl = responseData.url;
+    
+    console.log("\n提取的信息:");
+    console.log(`checkout_session_id: ${checkoutSessionId}`);
+    console.log(`payurl: ${shortPayurl}`);
+    console.log(`publishable_key: ${publishableKey}`);
+    
+    if (!checkoutSessionId || !publishableKey) {
+      return {
+        status: "error",
+        message: "上游返回缺少 checkout_session_id 或 publishable_key",
+        upstream_status: statusCode,
+        checkout_response: responseData
+      };
+    }
+    
+    // 构建 Stripe API 请求
+    console.log("\n发送Stripe API请求...");
+    const stripeUrl = `https://api.stripe.com/v1/payment_pages/${checkoutSessionId}/init`;
+    
+    const stripePayload = `browser_locale=zh-CN&browser_timezone=Asia%2FShanghai&elements_session_client[client_betas][0]=custom_checkout_server_updates_1&elements_session_client[client_betas][1]=custom_checkout_manual_approval_1&elements_session_client[elements_init_source]=custom_checkout&elements_session_client[referrer_host]=chatgpt.com&elements_session_client[stripe_js_id]=${generateUUID()}&elements_session_client[locale]=zh-CN&elements_session_client[is_aggregation_expected]=false&elements_options_client[stripe_js_locale]=auto&elements_options_client[saved_payment_method][enable_save]=never&elements_options_client[saved_payment_method][enable_redisplay]=never&key=${publishableKey}&_stripe_version=2025-03-31.basil%3B+checkout_server_update_beta%3Dv1%3B+checkout_manual_approval_preview%3Dv1`;
+    
+    // 发送 Stripe API 请求
+    const stripeResponse = await got.post(stripeUrl, {
+      body: stripePayload,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.87 Safari/537.36"
+      },
+      proxy: proxyUrl
+    });
+    
+    console.log(`请求状态: ${stripeResponse.statusCode}`);
+    const stripeBody = stripeResponse.body;
+    console.log("Stripe Response Content:", stripeBody);
+    
+    let stripeData;
+    try {
+      stripeData = JSON.parse(stripeBody);
+    } catch (e) {
+      return {
+        status: "error",
+        message: `解析 Stripe JSON 失败: ${e}`,
+        upstream_status: stripeResponse.statusCode,
+        checkout_response: responseData,
+        stripe_response: { raw: stripeBody }
+      };
+    }
+    
+    if (stripeResponse.statusCode >= 400) {
+      const message = stripeData.error?.message || stripeData.message || `Stripe 初始化失败 (${stripeResponse.statusCode})`;
+      return {
+        status: "error",
+        message: message,
+        upstream_status: stripeResponse.statusCode,
+        checkout_response: responseData,
+        stripe_response: stripeData
+      };
+    }
+    
+    const payurl = stripeData.stripe_hosted_url;
+    console.log(`支付链接: ${payurl}`);
+    
+    if (!payurl) {
+      return {
+        status: "error",
+        message: "Stripe 返回中未找到支付链接",
+        upstream_status: stripeResponse.statusCode,
+        checkout_response: responseData,
+        stripe_response: stripeData
+      };
+    }
+    
+    // 返回结果
+    return {
+      status: "success",
+      Stripe_payurl: payurl,
+      openai_payurl: shortPayurl,
+      chatgpt_payurl: "https://chatgpt.com/checkout/openai_llc/" + checkoutSessionId
+    };
+    
+  } catch (error) {
+    console.error(`请求失败: ${error}`);
+    return {
+      status: "error",
+      message: `请求失败: ${error.message}`
+    };
+  }
+}
+
+// 生成随机字符串
+function generateRandomString(length) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+// 生成 UUID
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+async function proxyPaymentLinkRequest(token, plus) {
+  const paymentServiceUrl = new URL("/api/request", PAYMENT_SERVICE_ORIGIN).toString();
+
+  let upstreamResponse;
+  try {
+    upstreamResponse = await fetch(paymentServiceUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({ token, plus }),
+    });
+  } catch (error) {
+    throw new Error(`无法连接到 ${PAYMENT_SERVICE_ORIGIN} (${error.message})`);
+  }
+
+  const rawBody = await upstreamResponse.text();
+  let payload;
+
+  try {
+    payload = rawBody ? JSON.parse(rawBody) : {};
+  } catch (error) {
+    throw new Error(`Python 支付服务返回了无法解析的响应 (${upstreamResponse.status})`);
+  }
+
+  return {
+    statusCode: upstreamResponse.status,
+    payload,
+  };
 }

@@ -1,14 +1,15 @@
-version: '3.8'
-
 services:
   card-auto:
     build: .
     container_name: card-auto-server
+    depends_on:
+      - payment-python
     ports:
       - "80:8000"
     environment:
       - PORT=8000
       - HOST=0.0.0.0
+      - PAYMENT_SERVICE_ORIGIN=http://payment-python:5001
       - REAL_API_KEY=${REAL_API_KEY:-}
       - INVITER_CODE=${INVITER_CODE:-}
       - DEVICE_ID=${DEVICE_ID:-browser-fingerprint}
@@ -26,3 +27,21 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  payment-python:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    container_name: card-auto-payment-python
+    environment:
+      - PAYMENT_SERVICE_HOST=0.0.0.0
+      - PAYMENT_SERVICE_PORT=5001
+    ports:
+      - "5001:5001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

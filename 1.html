@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>订阅支付创建面板</title>
+    <style>
+      :root {
+        --bg: #f5f5f7;
+        --panel: rgba(255, 255, 255, 0.92);
+        --panel-solid: #ffffff;
+        --text: #111111;
+        --muted: #6e6e73;
+        --soft: #a1a1a6;
+        --line: rgba(0, 0, 0, 0.1);
+        --line-strong: rgba(0, 0, 0, 0.18);
+        --black: #000000;
+        --danger: #dc2626;
+        --danger-bg: #fef2f2;
+        --danger-line: #fecaca;
+        --success-bg: #f7f7f8;
+        --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.08);
+        --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.06);
+        --shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.04);
+        --radius-xl: 26px;
+        --radius-lg: 20px;
+        --radius-md: 16px;
+        --transition: 180ms ease;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        background:
+          radial-gradient(circle at top, rgba(0, 0, 0, 0.04), transparent 32%),
+          linear-gradient(180deg, #f8f8fa 0%, var(--bg) 100%);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+
+      body.modal-open {
+        overflow: hidden;
+      }
+
+      button,
+      textarea,
+      summary {
+        font: inherit;
+      }
+
+      .page {
+        min-height: 100vh;
+        padding: 36px 16px;
+      }
+
+      .outer {
+        width: 100%;
+        max-width: 760px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: center;
+      }
+
+      .panel {
+        position: relative;
+        width: 100%;
+        max-width: 620px;
+        overflow: hidden;
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--line);
+        background: var(--panel);
+        box-shadow: var(--shadow-lg);
+        backdrop-filter: blur(14px);
+      }
+
+      .panel::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(248, 248, 250, 0.94));
+        pointer-events: none;
+      }
+
+      .panel-top-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 1px;
+        background: linear-gradient(90deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.22));
+        z-index: 1;
+      }
+
+      .panel-inner {
+        position: relative;
+        z-index: 2;
+        padding: 18px;
+      }
+
+      .header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 22px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(245, 245, 247, 0.9);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        color: #4a4a4f;
+      }
+
+      .eyebrow-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #000;
+      }
+
+      .title-wrap {
+        min-width: 0;
+      }
+
+      .title {
+        margin: 12px 0 0;
+        font-size: 21px;
+        font-weight: 600;
+        line-height: 1.25;
+        letter-spacing: -0.03em;
+      }
+
+      .subtitle {
+        margin: 8px 0 0;
+        max-width: 420px;
+        font-size: 12px;
+        line-height: 1.7;
+        color: var(--muted);
+      }
+
+      .header-side {
+        flex: 0 0 auto;
+        padding-top: 2px;
+      }
+
+      .header-chip {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.8);
+        font-size: 12px;
+        color: #4a4a4f;
+      }
+
+      .section-title,
+      .field-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+      }
+
+      .section-title {
+        margin-bottom: 14px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .field-label {
+        justify-content: space-between;
+        margin-bottom: 12px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .label-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .section-icon,
+      .field-icon,
+      .modal-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: #f3f3f4;
+        color: #000;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
+      }
+
+      .section-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 10px;
+      }
+
+      .field-icon,
+      .modal-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 12px;
+      }
+
+      .icon {
+        width: 14px;
+        height: 14px;
+        display: block;
+      }
+
+      .plans {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .plan-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 18px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.88);
+        padding: 16px;
+        cursor: pointer;
+        transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition), background var(--transition);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+      }
+
+      .plan-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(0, 0, 0, 0.24);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .plan-card.active {
+        border-color: rgba(0, 0, 0, 0.94);
+        background: rgba(255, 255, 255, 1);
+        box-shadow: var(--shadow-md);
+      }
+
+      .plan-card::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 2px;
+        background: rgba(0, 0, 0, 0.08);
+      }
+
+      .plan-card.active::before {
+        background: #000;
+      }
+
+      .plan-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .plan-left {
+        min-width: 0;
+      }
+
+      .plan-title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .plan-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1d1d1f;
+      }
+
+      .plan-card.active .plan-title,
+      .plan-card.active .plan-price {
+        color: #000;
+      }
+
+      .plan-tag {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 500;
+        background: #f3f3f5;
+        color: #6e6e73;
+      }
+
+      .plan-card.active .plan-tag {
+        background: #000;
+        color: #fff;
+      }
+
+      .plan-desc {
+        margin-top: 8px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+
+      .plan-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 12px;
+      }
+
+      .check-dot {
+        display: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        align-items: center;
+        justify-content: center;
+        background: #000;
+        color: #fff;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+      }
+
+      .plan-card.active .check-dot {
+        display: inline-flex;
+      }
+
+      .check-dot svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .plan-price {
+        font-size: 19px;
+        font-weight: 600;
+        color: #3a3a3c;
+        letter-spacing: -0.03em;
+      }
+
+      .field-block {
+        margin-top: 24px;
+        border-radius: var(--radius-lg);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(251, 251, 252, 0.98) 100%);
+        padding: 16px;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .field-tools {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .mini-btn {
+        height: 30px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(245, 245, 247, 0.85);
+        color: #111111;
+        cursor: pointer;
+        transition: background var(--transition), border-color var(--transition), transform var(--transition);
+      }
+
+      .mini-btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(0, 0, 0, 0.18);
+        background: #efeff1;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 132px;
+        resize: vertical;
+        border-radius: 18px;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        background: rgba(255, 255, 255, 0.96);
+        padding: 14px 16px;
+        font-size: 14px;
+        line-height: 1.7;
+        color: var(--text);
+        outline: none;
+        transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+      }
+
+      textarea::placeholder {
+        color: var(--soft);
+      }
+
+      textarea:focus {
+        border-color: rgba(0, 0, 0, 0.28);
+        background: #fff;
+        box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+      }
+
+      .hint {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-top: 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: #f5f5f7;
+        padding: 12px 14px;
+        font-size: 13px;
+        color: #3a3a3c;
+      }
+
+      .hint-icon {
+        flex: 0 0 auto;
+        width: 18px;
+        height: 18px;
+        color: rgba(0, 0, 0, 0.68);
+      }
+
+      .hint-content {
+        width: 100%;
+      }
+
+      .hint-content p {
+        margin: 0;
+        line-height: 1.68;
+      }
+
+      .hint-content a {
+        color: #000;
+        text-decoration-color: rgba(0, 0, 0, 0.24);
+        text-underline-offset: 4px;
+      }
+
+      .token-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.96);
+        padding: 10px 12px;
+        font-size: 12px;
+        color: #5c5c61;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #b7b7bc;
+        flex: 0 0 auto;
+      }
+
+      .token-status.is-ready .status-dot {
+        background: #000;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      .submit-btn,
+      .ghost-btn,
+      .modal-primary-btn,
+      .modal-secondary-btn,
+      .modal-close-btn,
+      .result-action-btn {
+        border: 0;
+        cursor: pointer;
+        transition: transform var(--transition), background var(--transition), border-color var(--transition), box-shadow var(--transition), opacity var(--transition), color var(--transition);
+      }
+
+      .submit-btn,
+      .ghost-btn {
+        height: 50px;
+        border-radius: 18px;
+      }
+
+      .submit-btn {
+        min-width: 0;
+        background: #000;
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+      }
+
+      .submit-btn:hover {
+        transform: translateY(-2px);
+        background: #1c1c1e;
+        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.22);
+      }
+
+      .submit-btn:disabled,
+      .ghost-btn:disabled,
+      .modal-primary-btn:disabled,
+      .modal-secondary-btn:disabled,
+      .modal-close-btn:disabled,
+      .result-action-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+        transform: none;
+      }
+
+      .ghost-btn {
+        padding: 0 16px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.7);
+        color: #111111;
+      }
+
+      .ghost-btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(0, 0, 0, 0.18);
+        background: #ffffff;
+      }
+
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        border-top-color: #fff;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .error-box {
+        margin-top: 12px;
+        border-radius: 18px;
+        border: 1px solid var(--danger-line);
+        background: var(--danger-bg);
+        padding: 12px 14px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--danger);
+      }
+
+      .result-box {
+        margin-top: 12px;
+        border-radius: 18px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: linear-gradient(180deg, #ffffff 0%, #fbfbfc 100%);
+        padding: 14px;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .result-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .result-title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .result-title {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .result-subtitle {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .result-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: var(--success-bg);
+        font-size: 12px;
+        color: #2d2d31;
+      }
+
+      .result-link-card {
+        margin-top: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: #fff;
+        padding: 12px 14px;
+        color: #111111;
+        text-decoration: none;
+        transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+      }
+
+      .result-link-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(0, 0, 0, 0.18);
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.05);
+      }
+
+      .result-link-main {
+        min-width: 0;
+      }
+
+      .result-link-label {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .result-link-text {
+        margin-top: 3px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .result-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .link-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        margin-bottom: 16px;
+      }
+
+      .result-action-btn {
+        height: 38px;
+        padding: 0 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.9);
+        color: #111111;
+      }
+
+      .result-action-btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(0, 0, 0, 0.18);
+        background: #fff;
+      }
+
+      details.result-details {
+        margin-top: 12px;
+      }
+
+      .result-details summary {
+        list-style: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+        color: #3a3a3c;
+        font-size: 13px;
+      }
+
+      .result-details summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .summary-caret {
+        transition: transform var(--transition);
+      }
+
+      .result-details[open] .summary-caret {
+        transform: rotate(90deg);
+      }
+
+      .result-json {
+        margin-top: 12px;
+        overflow-x: auto;
+        border-radius: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: #fff;
+        padding: 12px;
+        font-size: 11px;
+        line-height: 1.75;
+        color: #3a3a3c;
+      }
+
+      .modal {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .modal.is-visible {
+        display: flex;
+      }
+
+      .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.22);
+        backdrop-filter: blur(10px);
+      }
+
+      .modal-dialog {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 420px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+        backdrop-filter: blur(18px);
+        overflow: hidden;
+      }
+
+      .modal-dialog::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 247, 249, 0.96));
+        pointer-events: none;
+      }
+
+      .modal-inner {
+        position: relative;
+        z-index: 1;
+        padding: 18px;
+      }
+
+      .modal-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 14px;
+      }
+
+      .modal-close-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(245, 245, 247, 0.92);
+        color: #111111;
+        flex: 0 0 auto;
+      }
+
+      .modal-close-btn:hover {
+        transform: translateY(-1px);
+        background: #ededf0;
+        border-color: rgba(0, 0, 0, 0.16);
+      }
+
+      .modal-title-wrap {
+        min-width: 0;
+      }
+
+      .modal-title {
+        margin: 12px 0 0;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+      }
+
+      .modal-subtitle {
+        margin: 8px 0 0;
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--muted);
+      }
+
+      .modal-list {
+        margin: 18px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 10px;
+      }
+
+      .modal-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.88);
+      }
+
+      .modal-list-badge {
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        background: #000;
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        flex: 0 0 auto;
+        margin-top: 1px;
+      }
+
+      .modal-list strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 2px;
+      }
+
+      .modal-list span {
+        display: block;
+        font-size: 12px;
+        line-height: 1.65;
+        color: var(--muted);
+      }
+
+      .modal-actions {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .modal-primary-btn,
+      .modal-secondary-btn {
+        height: 46px;
+        border-radius: 16px;
+        padding: 0 16px;
+      }
+
+      .modal-primary-btn {
+        background: #000;
+        color: #fff;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+      }
+
+      .modal-primary-btn:hover {
+        transform: translateY(-1px);
+        background: #1c1c1e;
+      }
+
+      .modal-secondary-btn {
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.84);
+        color: #111111;
+      }
+
+      .modal-secondary-btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(0, 0, 0, 0.16);
+        background: #ffffff;
+      }
+
+      @media (max-width: 640px) {
+        .page {
+          padding: 22px 12px;
+        }
+
+        .panel-inner,
+        .modal-inner {
+          padding: 14px;
+        }
+
+        .header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .title,
+        .modal-title {
+          font-size: 18px;
+        }
+
+        .subtitle {
+          max-width: none;
+        }
+
+        .plans {
+          grid-template-columns: 1fr;
+        }
+
+        .actions,
+        .modal-actions {
+          grid-template-columns: 1fr;
+        }
+
+        .ghost-btn,
+        .modal-secondary-btn {
+          width: 100%;
+        }
+
+        .result-actions {
+          flex-direction: column;
+        }
+
+        .result-action-btn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="outer">
+        <div class="panel">
+          <div class="panel-top-line"></div>
+
+          <div class="panel-inner">
+            <div class="header">
+              <div class="title-wrap">
+                <div class="eyebrow">
+                  <span class="eyebrow-dot"></span>
+                  PAYMENT LINK GENERATOR
+                </div>
+                <h1 class="title">订阅支付创建面板</h1>
+                <p class="subtitle">支持直接粘贴 Access Token 或完整 session 文本，自动提取 accessToken 并生成 ChatGPT Plus / Team 订阅支付链接。</p>
+              </div>
+              <div class="header-side">
+                <div class="header-chip" id="planPreviewChip">当前方案：Team</div>
+              </div>
+            </div>
+
+            <div class="section-title">
+              <span class="section-icon" aria-hidden="true">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 7h16" />
+                  <path d="M6 7l1.4 10.2A2 2 0 0 0 9.38 19h5.24a2 2 0 0 0 1.98-1.8L18 7" />
+                  <path d="M9 11h6" />
+                </svg>
+              </span>
+              <span>选择订阅方案</span>
+            </div>
+
+            <div class="plans" id="plans"></div>
+
+            <div class="field-block">
+              <div class="field-label">
+                <div class="label-left">
+                  <span class="field-icon" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M7 10V8a5 5 0 1 1 10 0v2" />
+                      <rect x="4" y="10" width="16" height="10" rx="2" />
+                      <path d="M12 14v2" />
+                    </svg>
+                  </span>
+                  <span>Access Token</span>
+                </div>
+                <div class="field-tools">
+                  <button class="mini-btn" id="clearBtn" type="button">清空</button>
+                </div>
+              </div>
+
+              <textarea id="rawInput" placeholder="粘贴 Access Token、完整 JSON 响应，或包含 accessToken 的整段文本"></textarea>
+
+              <div class="hint">
+                <svg class="hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 10v6" />
+                  <path d="M12 7h.01" />
+                </svg>
+                <div class="hint-content">
+                  <p>
+                    在
+                    <a href="https://chatgpt.com/api/auth/session" target="_blank" rel="noreferrer">chatgpt.com/api/auth/session</a>
+                    获取 session 文本。这里支持直接粘贴整段 JSON 或整段文本，页面会自动提取 accessToken 后再请求本地接口
+                    <span id="apiUrlText"></span>
+                  </p>
+                  <div class="token-status" id="tokenStatus">
+                    <span class="status-dot"></span>
+                    <span id="tokenStatusText">暂未识别到 accessToken。</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="submit-btn" id="submitBtn" type="button">
+                <span id="submitIcon" aria-hidden="true">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m22 2-7 20-4-9-9-4Z" />
+                    <path d="M22 2 11 13" />
+                  </svg>
+                </span>
+                <span id="submitText">生成支付链接</span>
+              </button>
+              <button class="ghost-btn" id="reopenGuideBtn" type="button">查看说明</button>
+            </div>
+
+            <div class="error-box" id="errorBox" style="display: none"></div>
+
+            <div class="result-box" id="resultBox" style="display: none">
+              <div class="result-header">
+                <div class="result-title-wrap">
+                  <div class="result-title">请求结果</div>
+                  <div class="result-subtitle">请求成功后会在这里显示支付链接与返回内容。</div>
+                </div>
+                <div class="result-badge" id="resultBadge">已返回</div>
+              </div>
+
+              <div class="result-link-container" style="display: none" id="stripeLinkContainer">
+                <a id="stripeLinkCard" class="result-link-card" href="#" target="_blank" rel="noreferrer">
+                  <div class="result-link-main">
+                    <div class="result-link-label">Stripe外部支付链接</div>
+                    <div class="result-link-text" id="stripeLinkText"></div>
+                  </div>
+                  <span aria-hidden="true">↗</span>
+                </a>
+                <div class="link-actions">
+                  <button class="result-action-btn" id="copyStripeLinkBtn" type="button">复制链接</button>
+                  <button class="result-action-btn" id="openStripeLinkBtn" type="button">打开链接</button>
+                </div>
+              </div>
+
+              <div class="result-link-container" style="display: none" id="chatgptLinkContainer">
+                <a id="chatgptLinkCard" class="result-link-card" href="#" target="_blank" rel="noreferrer">
+                  <div class="result-link-main">
+                    <div class="result-link-label">Chatgpt支付短链</div>
+                    <div class="result-link-text" id="chatgptLinkText"></div>
+                  </div>
+                  <span aria-hidden="true">↗</span>
+                </a>
+                <div class="link-actions">
+                  <button class="result-action-btn" id="copyChatgptLinkBtn" type="button">复制链接</button>
+                  <button class="result-action-btn" id="openChatgptLinkBtn" type="button">打开链接</button>
+                </div>
+              </div>
+
+              <div class="result-link-container" style="display: none" id="openaiLinkContainer">
+                <a id="openaiLinkCard" class="result-link-card" href="#" target="_blank" rel="noreferrer">
+                  <div class="result-link-main">
+                    <div class="result-link-label">openai站内长链</div>
+                    <div class="result-link-text" id="openaiLinkText"></div>
+                  </div>
+                  <span aria-hidden="true">↗</span>
+                </a>
+                <div class="link-actions">
+                  <button class="result-action-btn" id="copyOpenaiLinkBtn" type="button">复制链接</button>
+                  <button class="result-action-btn" id="openOpenaiLinkBtn" type="button">打开链接</button>
+                </div>
+              </div>
+
+              <div class="result-actions" id="resultActions" style="display: none">
+                <button class="result-action-btn" id="copyLinkBtn" type="button">复制链接</button>
+                <button class="result-action-btn" id="openLinkBtn" type="button">打开链接</button>
+              </div>
+
+              <details class="result-details" id="resultDetails">
+                <summary>
+                  <span class="summary-caret">▶</span>
+                  <span>查看原始返回 JSON</span>
+                </summary>
+                <pre class="result-json" id="resultJson"></pre>
+              </details>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="welcomeModal" aria-hidden="true">
+      <div class="modal-backdrop" data-close-modal="true"></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="welcomeModalTitle">
+        <div class="modal-inner">
+          <div class="modal-top">
+            <div class="modal-title-wrap">
+              <span class="modal-icon" aria-hidden="true">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3v6" />
+                  <path d="M16.24 7.76 12 12" />
+                  <circle cx="12" cy="12" r="9" />
+                </svg>
+              </span>
+              <h2 class="modal-title" id="welcomeModalTitle">支付链接生成指南</h2>
+              <p class="modal-subtitle">ChatGPT Plus / Team 订阅支付链接一键生成</p>
+            </div>
+            <button class="modal-close-btn" id="modalCloseBtn" type="button" aria-label="关闭提示">✕</button>
+          </div>
+
+          <ul class="modal-list">
+            <li>
+              <span class="modal-list-badge">3</span>
+              <div>
+                <strong>生成支付链接</strong>
+                <span>粘贴 Token 后点击生成，系统自动创建 $0 支付链接</span>
+              </div>
+            </li>
+            <li>
+              <span class="modal-list-badge">4</span>
+              <div>
+                <strong>完成绑卡支付</strong>
+                <span>打开链接进入支付页面，使用信用卡完成 $0 扣款绑定</span>
+              </div>
+            </li>
+          </ul>
+
+          <div style="margin-top: 14px; border-radius: 16px; border: 1px solid rgba(245, 158, 11, 0.22); background: #fff7d6; padding: 12px 14px; font-size: 12px; line-height: 1.7; color: #7a4b00;">
+            ⚠️ 请确保 Access Token 有效且未过期，生成后链接有时效性，请尽快使用。
+          </div>
+
+          <div class="modal-actions">
+            <button class="modal-primary-btn" id="modalPrimaryBtn" type="button">我知道了，开始生成</button>
+            <button class="modal-secondary-btn" id="modalSecondaryBtn" type="button">稍后再看</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_URL = "/api/request";
+      const FIRST_VISIT_STORAGE_KEY = "subscription_payment_first_visit_seen_v1";
+
+      const plans = [
+        {
+          id: "plus",
+          title: "ChatGPT Plus (试用)",
+          desc: "日区 · 兼容微软0刀",
+          price: "$0",
+          tag: "轻量",
+        },
+      ];
+
+      let selectedPlan = "plus";
+      let loading = false;
+      let result = null;
+      let currentResultLink = "";
+
+      const plansEl = document.getElementById("plans");
+      const rawInputEl = document.getElementById("rawInput");
+      const tokenStatusEl = document.getElementById("tokenStatus");
+      const tokenStatusTextEl = document.getElementById("tokenStatusText");
+      const submitBtnEl = document.getElementById("submitBtn");
+      const submitTextEl = document.getElementById("submitText");
+      const submitIconEl = document.getElementById("submitIcon");
+      const clearBtnEl = document.getElementById("clearBtn");
+      const reopenGuideBtnEl = document.getElementById("reopenGuideBtn");
+      const errorBoxEl = document.getElementById("errorBox");
+      const resultBoxEl = document.getElementById("resultBox");
+      const resultJsonEl = document.getElementById("resultJson");
+
+      const resultActionsEl = document.getElementById("resultActions");
+      const copyLinkBtnEl = document.getElementById("copyLinkBtn");
+      const openLinkBtnEl = document.getElementById("openLinkBtn");
+      const stripeLinkCardEl = document.getElementById("stripeLinkCard");
+      const stripeLinkTextEl = document.getElementById("stripeLinkText");
+      const chatgptLinkCardEl = document.getElementById("chatgptLinkCard");
+      const chatgptLinkTextEl = document.getElementById("chatgptLinkText");
+      const openaiLinkCardEl = document.getElementById("openaiLinkCard");
+      const openaiLinkTextEl = document.getElementById("openaiLinkText");
+      const stripeLinkContainerEl = document.getElementById("stripeLinkContainer");
+      const chatgptLinkContainerEl = document.getElementById("chatgptLinkContainer");
+      const openaiLinkContainerEl = document.getElementById("openaiLinkContainer");
+      const copyStripeLinkBtnEl = document.getElementById("copyStripeLinkBtn");
+      const openStripeLinkBtnEl = document.getElementById("openStripeLinkBtn");
+      const copyChatgptLinkBtnEl = document.getElementById("copyChatgptLinkBtn");
+      const openChatgptLinkBtnEl = document.getElementById("openChatgptLinkBtn");
+      const copyOpenaiLinkBtnEl = document.getElementById("copyOpenaiLinkBtn");
+      const openOpenaiLinkBtnEl = document.getElementById("openOpenaiLinkBtn");
+      const resultDetailsEl = document.getElementById("resultDetails");
+      const resultBadgeEl = document.getElementById("resultBadge");
+      const apiUrlTextEl = document.getElementById("apiUrlText");
+      const planPreviewChipEl = document.getElementById("planPreviewChip");
+      const welcomeModalEl = document.getElementById("welcomeModal");
+      const modalCloseBtnEl = document.getElementById("modalCloseBtn");
+      const modalPrimaryBtnEl = document.getElementById("modalPrimaryBtn");
+      const modalSecondaryBtnEl = document.getElementById("modalSecondaryBtn");
+
+      apiUrlTextEl.textContent = " " + API_URL;
+
+      // 添加事件监听器
+      if (copyStripeLinkBtnEl) {
+        copyStripeLinkBtnEl.addEventListener("click", copyStripeLink);
+      }
+      if (openStripeLinkBtnEl) {
+        openStripeLinkBtnEl.addEventListener("click", openStripeLink);
+      }
+      if (copyChatgptLinkBtnEl) {
+        copyChatgptLinkBtnEl.addEventListener("click", copyChatgptLink);
+      }
+      if (openChatgptLinkBtnEl) {
+        openChatgptLinkBtnEl.addEventListener("click", openChatgptLink);
+      }
+      if (copyOpenaiLinkBtnEl) {
+        copyOpenaiLinkBtnEl.addEventListener("click", copyOpenaiLink);
+      }
+      if (openOpenaiLinkBtnEl) {
+        openOpenaiLinkBtnEl.addEventListener("click", openOpenaiLink);
+      }
+
+      function planLabelById(id) {
+        return id === "plus" ? "Plus" : "Team";
+      }
+
+      function renderPlans() {
+        plansEl.innerHTML = plans
+          .map((plan) => {
+            const active = selectedPlan === plan.id;
+            return `
+              <button class="plan-card ${active ? "active" : ""}" data-plan-id="${plan.id}" type="button">
+                <div class="plan-head">
+                  <div class="plan-left">
+                    <div class="plan-title-row">
+                      <div class="plan-title">${escapeHtml(plan.title)}</div>
+                      <span class="plan-tag">${escapeHtml(plan.tag)}</span>
+                    </div>
+                    <div class="plan-desc">${escapeHtml(plan.desc)}</div>
+                  </div>
+                  <div class="plan-right">
+                    <div class="check-dot" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m5 13 4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div class="plan-price">${escapeHtml(plan.price)}</div>
+                  </div>
+                </div>
+              </button>
+            `;
+          })
+          .join("");
+
+        planPreviewChipEl.textContent = `当前方案：${planLabelById(selectedPlan)}`;
+
+        plansEl.querySelectorAll(".plan-card").forEach((button) => {
+          button.addEventListener("click", () => {
+            selectedPlan = button.dataset.planId;
+            renderPlans();
+          });
+        });
+      }
+
+      function extractAccessToken(input) {
+        const text = String(input || "").trim();
+        if (!text) return "";
+
+        if (looksLikeJwt(text)) return text;
+
+        try {
+          const parsed = JSON.parse(text);
+          const direct =
+            parsed?.accessToken ||
+            parsed?.access_token ||
+            parsed?.token ||
+            parsed?.data?.accessToken ||
+            parsed?.data?.access_token ||
+            parsed?.data?.token ||
+            "";
+
+          if (typeof direct === "string" && looksLikeJwt(direct.trim())) {
+            return direct.trim();
+          }
+        } catch (_) {}
+
+        const patterns = [
+          /"accessToken"\s*:\s*"([^"]+)"/i,
+          /"access_token"\s*:\s*"([^"]+)"/i,
+          /"token"\s*:\s*"([^"]+)"/i,
+          /accessToken\s*[:=]\s*['"]?([^'"\s,}]+)['"]?/i,
+          /access_token\s*[:=]\s*['"]?([^'"\s,}]+)['"]?/i,
+        ];
+
+        for (const pattern of patterns) {
+          const match = text.match(pattern);
+          if (match?.[1] && looksLikeJwt(match[1].trim())) {
+            return match[1].trim();
+          }
+        }
+
+        const jwtMatch = text.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
+        return jwtMatch?.[0]?.trim() || "";
+      }
+
+      function looksLikeJwt(value) {
+        return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(String(value || "").trim());
+      }
+
+      function looksLikeStructuredPayload(value) {
+        const text = String(value || "").trim();
+        if (!text) return false;
+        return text.startsWith("{") || /accessToken|access_token|sessionToken/i.test(text);
+      }
+
+      function getResultLink(payload) {
+        return (
+          payload?.url ||
+          payload?.link ||
+          payload?.payurl ||
+          payload?.payment_url ||
+          payload?.pay_url ||
+          payload?.data?.url ||
+          payload?.data?.link ||
+          payload?.data?.payurl ||
+          payload?.data?.pay_url ||
+          ""
+        );
+      }
+
+      function getErrorMessage(payload, statusCode) {
+        return (
+          payload?.message ||
+          payload?.error ||
+          payload?.detail ||
+          (statusCode ? `请求失败 (${statusCode})` : "") ||
+          "请求失败，请检查本地接口是否已启动"
+        );
+      }
+
+      function updateTokenStatus() {
+        const rawInput = rawInputEl.value;
+        const extractedToken = extractAccessToken(rawInput);
+        const hasStructuredInput = looksLikeStructuredPayload(rawInput);
+
+        if (extractedToken) {
+          tokenStatusEl.classList.add("is-ready");
+          tokenStatusTextEl.textContent = hasStructuredInput
+            ? "已检测到 accessToken，提交时会自动使用，不会在页面中明文展示。"
+            : "当前输入看起来像 token，提交时会直接使用。";
+        } else {
+          tokenStatusEl.classList.remove("is-ready");
+          tokenStatusTextEl.textContent = "暂未识别到 accessToken。";
+        }
+      }
+
+      function setLoadingState(isLoading) {
+        loading = isLoading;
+        submitBtnEl.disabled = isLoading;
+        reopenGuideBtnEl.disabled = isLoading;
+        clearBtnEl.disabled = isLoading;
+        submitTextEl.textContent = isLoading ? "请求中..." : "生成支付链接";
+        submitIconEl.innerHTML = isLoading
+          ? '<span class="spinner"></span>'
+          : '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>';
+      }
+
+      function showError(message) {
+        errorBoxEl.style.display = "block";
+        errorBoxEl.textContent = message;
+      }
+
+      function hideError() {
+        errorBoxEl.style.display = "none";
+        errorBoxEl.textContent = "";
+      }
+
+      function showResult(payload) {
+        result = payload;
+        
+        // 检查是否是新的返回格式
+        const stripePayurl = payload?.Stripe_payurl || "";
+        const chatgptPayurl = payload?.chatgpt_payurl || "";
+        const openaiPayurl = payload?.openai_payurl || "";
+        
+        // 兼容旧格式
+        currentResultLink = stripePayurl || chatgptPayurl || openaiPayurl || getResultLink(payload);
+
+        resultBoxEl.style.display = "block";
+        resultJsonEl.textContent = JSON.stringify(payload, null, 2);
+        resultBadgeEl.textContent = currentResultLink ? "链接已生成" : "已返回";
+        resultDetailsEl.open = false;
+
+        // 显示Stripe链接
+        if (stripePayurl) {
+          stripeLinkContainerEl.style.display = "block";
+          stripeLinkCardEl.href = stripePayurl;
+          stripeLinkTextEl.textContent = stripePayurl;
+        } else {
+          stripeLinkContainerEl.style.display = "none";
+          stripeLinkCardEl.href = "#";
+          stripeLinkTextEl.textContent = "";
+        }
+
+        // 显示ChatGPT链接
+        if (chatgptPayurl) {
+          chatgptLinkContainerEl.style.display = "block";
+          chatgptLinkCardEl.href = chatgptPayurl;
+          chatgptLinkTextEl.textContent = chatgptPayurl;
+        } else {
+          chatgptLinkContainerEl.style.display = "none";
+          chatgptLinkCardEl.href = "#";
+          chatgptLinkTextEl.textContent = "";
+        }
+
+        // 显示OpenAI链接
+        if (openaiPayurl) {
+          openaiLinkContainerEl.style.display = "block";
+          openaiLinkCardEl.href = openaiPayurl;
+          openaiLinkTextEl.textContent = openaiPayurl;
+        } else {
+          openaiLinkContainerEl.style.display = "none";
+          openaiLinkCardEl.href = "#";
+          openaiLinkTextEl.textContent = "";
+        }
+
+        // 隐藏旧的操作按钮
+        resultActionsEl.style.display = "none";
+      }
+
+      async function copyStripeLink() {
+        const url = stripeLinkCardEl?.href || "";
+        if (!url || url === "#") return;
+        try {
+          await navigator.clipboard.writeText(url);
+          copyStripeLinkBtnEl.textContent = "已复制";
+          window.setTimeout(() => {
+            copyStripeLinkBtnEl.textContent = "复制链接";
+          }, 1600);
+        } catch (_) {
+          copyStripeLinkBtnEl.textContent = "复制失败";
+          window.setTimeout(() => {
+            copyStripeLinkBtnEl.textContent = "复制链接";
+          }, 1600);
+        }
+      }
+
+      function openStripeLink() {
+        const url = stripeLinkCardEl?.href || "";
+        if (!url || url === "#") return;
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+
+      async function copyChatgptLink() {
+        const url = chatgptLinkCardEl?.href || "";
+        if (!url || url === "#") return;
+        try {
+          await navigator.clipboard.writeText(url);
+          copyChatgptLinkBtnEl.textContent = "已复制";
+          window.setTimeout(() => {
+            copyChatgptLinkBtnEl.textContent = "复制链接";
+          }, 1600);
+        } catch (_) {
+          copyChatgptLinkBtnEl.textContent = "复制失败";
+          window.setTimeout(() => {
+            copyChatgptLinkBtnEl.textContent = "复制链接";
+          }, 1600);
+        }
+      }
+
+      function openChatgptLink() {
+        const url = chatgptLinkCardEl?.href || "";
+        if (!url || url === "#") return;
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+
+      async function copyOpenaiLink() {
+        const url = openaiLinkCardEl?.href || "";
+        if (!url || url === "#") return;
+        try {
+          await navigator.clipboard.writeText(url);
+          copyOpenaiLinkBtnEl.textContent = "已复制";
+          window.setTimeout(() => {
+            copyOpenaiLinkBtnEl.textContent = "复制链接";
+          }, 1600);
+        } catch (_) {
+          copyOpenaiLinkBtnEl.textContent = "复制失败";
+          window.setTimeout(() => {
+            copyOpenaiLinkBtnEl.textContent = "复制链接";
+          }, 1600);
+        }
+      }
+
+      function openOpenaiLink() {
+        const url = openaiLinkCardEl?.href || "";
+        if (!url || url === "#") return;
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+
+      function hideResult() {
+        result = null;
+        currentResultLink = "";
+        resultBoxEl.style.display = "none";
+        resultJsonEl.textContent = "";
+        
+        // 隐藏所有链接容器
+        if (stripeLinkContainerEl) {
+          stripeLinkContainerEl.style.display = "none";
+          stripeLinkCardEl.href = "#";
+          stripeLinkTextEl.textContent = "";
+        }
+        
+        if (chatgptLinkContainerEl) {
+          chatgptLinkContainerEl.style.display = "none";
+          chatgptLinkCardEl.href = "#";
+          chatgptLinkTextEl.textContent = "";
+        }
+        
+        if (openaiLinkContainerEl) {
+          openaiLinkContainerEl.style.display = "none";
+          openaiLinkCardEl.href = "#";
+          openaiLinkTextEl.textContent = "";
+        }
+        
+        if (resultActionsEl) {
+          resultActionsEl.style.display = "none";
+        }
+      }
+
+      async function handleSubmit() {
+        const rawInput = rawInputEl.value;
+        const cleanedToken = extractAccessToken(rawInput).trim();
+
+        if (!cleanedToken) {
+          hideResult();
+          showError("请先输入 Access Token 或可提取 accessToken 的文本");
+          return;
+        }
+
+        setLoadingState(true);
+        hideError();
+        hideResult();
+
+        try {
+          const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              token: cleanedToken,
+              plus: selectedPlan === "plus",
+            }),
+          });
+
+          const rawText = await response.text();
+          let parsed;
+
+          try {
+            parsed = rawText ? JSON.parse(rawText) : null;
+          } catch (_) {
+            parsed = { message: rawText };
+          }
+
+          if (!response.ok || parsed?.status === "error") {
+            const message = getErrorMessage(parsed, response.status);
+            throw new Error(message);
+          }
+
+          showResult(parsed || { success: true });
+        } catch (err) {
+          const message =
+            err instanceof TypeError
+              ? "无法连接接口，请确认服务已启动并可访问。"
+              : err instanceof Error
+                ? err.message
+                : "请求失败，请检查接口是否已启动";
+          showError(message);
+        } finally {
+          setLoadingState(false);
+        }
+      }
+
+      async function copyResultLink() {
+        if (!currentResultLink) return;
+        try {
+          await navigator.clipboard.writeText(currentResultLink);
+          copyLinkBtnEl.textContent = "已复制";
+          window.setTimeout(() => {
+            copyLinkBtnEl.textContent = "复制链接";
+          }, 1600);
+        } catch (_) {
+          copyLinkBtnEl.textContent = "复制失败";
+          window.setTimeout(() => {
+            copyLinkBtnEl.textContent = "复制链接";
+          }, 1600);
+        }
+      }
+
+      function openResultLink() {
+        if (!currentResultLink) return;
+        window.open(currentResultLink, "_blank", "noopener,noreferrer");
+      }
+
+      function clearInput() {
+        rawInputEl.value = "";
+        updateTokenStatus();
+        hideError();
+      }
+
+      function openWelcomeModal() {
+        welcomeModalEl.classList.add("is-visible");
+        welcomeModalEl.setAttribute("aria-hidden", "false");
+        document.body.classList.add("modal-open");
+      }
+
+      function closeWelcomeModal(markSeen) {
+        welcomeModalEl.classList.remove("is-visible");
+        welcomeModalEl.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("modal-open");
+        if (markSeen) {
+          try {
+            window.localStorage.setItem(FIRST_VISIT_STORAGE_KEY, "1");
+          } catch (_) {}
+        }
+      }
+
+      function maybeShowWelcomeModal() {
+        try {
+          const hasSeen = window.localStorage.getItem(FIRST_VISIT_STORAGE_KEY) === "1";
+          if (!hasSeen) {
+            openWelcomeModal();
+          }
+        } catch (_) {
+          openWelcomeModal();
+        }
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      rawInputEl.addEventListener("input", updateTokenStatus);
+      submitBtnEl.addEventListener("click", handleSubmit);
+      clearBtnEl.addEventListener("click", clearInput);
+      reopenGuideBtnEl.addEventListener("click", () => openWelcomeModal());
+      copyLinkBtnEl.addEventListener("click", copyResultLink);
+      openLinkBtnEl.addEventListener("click", openResultLink);
+      modalCloseBtnEl.addEventListener("click", () => closeWelcomeModal(true));
+      modalPrimaryBtnEl.addEventListener("click", () => closeWelcomeModal(true));
+      modalSecondaryBtnEl.addEventListener("click", () => closeWelcomeModal(false));
+      welcomeModalEl.addEventListener("click", (event) => {
+        if (event.target instanceof HTMLElement && event.target.dataset.closeModal === "true") {
+          closeWelcomeModal(true);
+        }
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && welcomeModalEl.classList.contains("is-visible")) {
+          closeWelcomeModal(true);
+        }
+      });
+
+      renderPlans();
+      updateTokenStatus();
+      maybeShowWelcomeModal();
+    </script>
+  </body>
+</html>

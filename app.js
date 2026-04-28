@@ -5,13 +5,35 @@ const resultMessage = document.getElementById("resultMessage");
 const modeBadge = document.getElementById("modeBadge");
 const resultState = document.getElementById("resultState");
 const setupHint = document.getElementById("setupHint");
+const localHistoryList = document.getElementById("localHistoryList");
+const tutorialLink = document.getElementById("tutorialLink");
+const buyCardLink = document.getElementById("buyCardLink");
+const DEFAULT_INSTRUCTION_TEXT = "此手机号仅用于接收 3DS 与消费验证码，无法用于注册任何项目。";
+const CURRENT_CARD_KEY = "card_current_card";
+
+[tutorialLink, buyCardLink].forEach((link) => {
+  if (!link) {
+    return;
+  }
+
+  link.addEventListener("click", (event) => {
+    if (link.getAttribute("aria-disabled") === "true") {
+      event.preventDefault();
+    }
+  });
+});
 
 // localStorage 历史记录管理
-const HISTORY_KEY = 'card_redeem_history';
+const HISTORY_KEY = "card_redeem_history";
 
 function getLocalHistory() {
-  const data = localStorage.getItem(HISTORY_KEY);
-  return data ? JSON.parse(data) : [];
+  try {
+    const data = localStorage.getItem(HISTORY_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    localStorage.removeItem(HISTORY_KEY);
+    return [];
+  }
 }
 
 function saveToLocalHistory(item) {
@@ -31,6 +53,101 @@ function saveToLocalHistory(item) {
   }
   
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  renderLocalHistoryList();
+}
+
+function getCurrentCardState() {
+  try {
+    const data = localStorage.getItem(CURRENT_CARD_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    localStorage.removeItem(CURRENT_CARD_KEY);
+    return null;
+  }
+}
+
+function saveCurrentCardState(state) {
+  localStorage.setItem(CURRENT_CARD_KEY, JSON.stringify(state));
+}
+
+function clearCurrentCardState() {
+  localStorage.removeItem(CURRENT_CARD_KEY);
+}
+
+function renderLocalHistoryList() {
+  if (!localHistoryList) {
+    return;
+  }
+
+  const history = getLocalHistory();
+  localHistoryList.replaceChildren();
+
+  if (!history.length) {
+    const emptyState = document.createElement("p");
+    emptyState.className = "rounded-xl border border-neutral-300 bg-white px-4 py-3 text-xs text-neutral-500";
+    emptyState.textContent = "暂无兑换历史";
+    localHistoryList.appendChild(emptyState);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  history.forEach((item) => {
+    const details = document.createElement("details");
+    details.className = "rounded-xl border border-neutral-300 bg-white";
+
+    const summary = document.createElement("summary");
+    summary.className = "list-none cursor-pointer px-4 py-3";
+
+    const summaryText = document.createElement("div");
+    summaryText.className = "truncate text-xs text-neutral-700";
+    summaryText.textContent = formatHistorySummary(item);
+    summary.appendChild(summaryText);
+
+    const content = document.createElement("pre");
+    content.className = "overflow-x-auto border-t border-neutral-200 px-4 py-3 text-xs leading-relaxed text-neutral-700";
+    content.textContent = JSON.stringify(item, null, 2);
+
+    details.appendChild(summary);
+    details.appendChild(content);
+    fragment.appendChild(details);
+  });
+
+  localHistoryList.appendChild(fragment);
+}
+
+function formatHistorySummary(item) {
+  const cdk = safeText(item.cdk || "-");
+  const category = safeText(item.category_name || "-");
+  const orderNo = safeText(item.order_no || "-");
+  const cardTail = getCardTail(item.card_number);
+  const redeemedAt = formatHistoryTime(item.redeemed_at);
+
+  return `CDK ${cdk} · 分类 ${category} · 尾号 ${cardTail} · 订单 ${orderNo} · ${redeemedAt}`;
+}
+
+function getCardTail(cardNumber) {
+  const digits = String(cardNumber || "").replace(/\D/g, "");
+  return digits ? digits.slice(-4) : "----";
+}
+
+function formatHistoryTime(input) {
+  if (!input) {
+    return "-";
+  }
+
+  const date = new Date(input);
+  if (Number.isNaN(date.getTime())) {
+    return String(input);
+  }
+
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 const fields = {
@@ -87,7 +204,7 @@ if (refreshCodeBtn) {
       }
     } catch (error) {
       if (fields.verificationCode) {
-        fields.verificationCode.textContent = "获取失败";
+        fields.verificationCode.textContent = "暂无验证码";
         fields.verificationCode.classList.add("no-code");
       }
     } finally {
@@ -155,7 +272,16 @@ redeemForm.addEventListener("submit", async (event) => {
       throw new Error(payload?.message || "兑换失败，请稍后重试。");
     }
 
+    const redeemedAt = new Date().toISOString();
+    const countdownEndsAt = buildCountdownEndsAt(payload.item.activatedAt, redeemedAt);
+
     renderPayload(payload.item);
+    saveCurrentCardState({
+      cdk,
+      item: payload.item,
+      countdownEndsAt,
+      savedAt: redeemedAt,
+    });
     
     // 保存到本地历史记录
     saveToLocalHistory({
@@ -177,20 +303,24 @@ redeemForm.addEventListener("submit", async (event) => {
       is_first_assignment: payload.item.isFirstAssignment,
       activated_at: payload.item.activatedAt,
       expires_at: payload.item.expiresAt,
-      redeemed_at: new Date().toISOString()
+      redeemed_at: redeemedAt
     });
     
     // 根据激活时间启动1小时倒计时
-    startCountdown(payload.item.activatedAt);
+    startCountdown(countdownEndsAt);
   } catch (error) {
-    clearPreview();
+    clearPreview({ clearStoredCard: true });
   } finally {
     setLoading(false);
   }
 });
 
 bootstrap();
-clearPreview();
+renderLocalHistoryList();
+
+if (!restoreCurrentCardState()) {
+  clearPreview();
+}
 
 async function bootstrap() {
   try {
@@ -207,12 +337,37 @@ async function bootstrap() {
     if (setupHint) {
       setupHint.textContent = payload.hint;
     }
+
+    applyExternalLink(tutorialLink, payload.tutorialUrl);
+    applyExternalLink(buyCardLink, payload.buyCardUrl);
   } catch (error) {
     if (modeBadge) {
       modeBadge.textContent = "Status Error";
     }
     setState("Offline");
+    applyExternalLink(tutorialLink, "");
+    applyExternalLink(buyCardLink, "");
   }
+}
+
+function applyExternalLink(element, url) {
+  if (!element) {
+    return;
+  }
+
+  const hasUrl = typeof url === "string" && /^https?:\/\//i.test(url.trim());
+  if (hasUrl) {
+    element.href = url.trim();
+    element.setAttribute("aria-disabled", "false");
+    element.removeAttribute("tabindex");
+    element.classList.remove("is-disabled");
+    return;
+  }
+
+  element.href = "#";
+  element.setAttribute("aria-disabled", "true");
+  element.setAttribute("tabindex", "-1");
+  element.classList.add("is-disabled");
 }
 
 function renderPayload(item) {
@@ -306,14 +461,14 @@ async function fetchVerificationCode() {
       }
     } else {
       if (fields.verificationCode) {
-        fields.verificationCode.textContent = "获取失败";
-        fields.verificationCode.className = "text-sm font-mono font-bold text-red-500";
+        fields.verificationCode.textContent = "暂无验证码";
+        fields.verificationCode.className = "text-sm font-mono font-bold text-stone-400";
       }
     }
   } catch (error) {
     if (fields.verificationCode) {
-      fields.verificationCode.textContent = "获取失败";
-      fields.verificationCode.className = "text-sm font-mono font-bold text-red-500";
+      fields.verificationCode.textContent = "暂无验证码";
+      fields.verificationCode.className = "text-sm font-mono font-bold text-stone-400";
     }
   }
 }
@@ -400,7 +555,36 @@ function parseAddress(address) {
   }
 }
 
-function clearPreview() {
+function restoreCurrentCardState() {
+  const currentCardState = getCurrentCardState();
+  if (!currentCardState?.item) {
+    return false;
+  }
+
+  renderPayload(currentCardState.item);
+  if (cdkInput && currentCardState.cdk) {
+    cdkInput.value = currentCardState.cdk;
+  }
+
+  const countdownEndsAt = resolveCurrentCardCountdownEndAt(currentCardState);
+  if (countdownEndsAt) {
+    if (currentCardState.countdownEndsAt !== countdownEndsAt) {
+      saveCurrentCardState({
+        ...currentCardState,
+        countdownEndsAt,
+      });
+    }
+    startCountdown(countdownEndsAt);
+  } else {
+    stopCountdown();
+  }
+
+  setState("已恢复");
+  return true;
+}
+
+function clearPreview(options = {}) {
+  const { clearStoredCard = false } = options;
   renderPayload({
     categoryName: "-",
     isFirstAssignment: null,
@@ -417,8 +601,15 @@ function clearPreview() {
     verificationUrl: null,
     activatedAt: "-",
     expiresAt: "-",
-    instruction: "等待有效 CDK。",
+    instruction: DEFAULT_INSTRUCTION_TEXT,
   });
+  if (clearStoredCard) {
+    clearCurrentCardState();
+  }
+  if (cdkInput) {
+    cdkInput.value = "";
+  }
+  stopCountdown();
   setState("等待兑换");
 }
 
@@ -640,125 +831,8 @@ function displayCompleteInfo(completeInfo) {
 }
 
 // 显示历史记录弹窗
-function showHistoryModal() {
-  const history = getLocalHistory();
-  
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4';
-  modal.innerHTML = `
-    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-      <div class="flex justify-between items-center p-6 border-b">
-        <h3 class="text-xl font-bold text-gray-900">兑换历史</h3>
-        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
-      </div>
-      <div class="flex-1 overflow-y-auto p-6">
-        ${history.length > 0 ? history.map(item => {
-          const date = new Date(item.redeemed_at).toLocaleString('zh-CN');
-          const isExpired = new Date(item.expires_at) < new Date();
-          return `
-            <div class="bg-gray-50 rounded-xl p-4 mb-4">
-              <div class="flex justify-between items-start mb-2">
-                <div>
-                  <p class="font-semibold text-gray-900">CDK: ${item.cdk}</p>
-                  <p class="text-sm text-gray-500">订单: ${item.order_no}</p>
-                  <p class="text-sm text-gray-500">卡号: ${item.card_number}</p>
-                </div>
-                <div class="text-right">
-                  <p class="text-xs text-gray-400">${date}</p>
-                  <p class="text-xs font-semibold ${isExpired ? 'text-red-500' : 'text-green-600'}">${isExpired ? '已过期' : '有效'}</p>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('') : '<p class="text-center text-gray-500 py-12">暂无兑换记录</p>'}
-      </div>
-    </div>
-  `;
-  
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.remove();
-    }
-  });
-  
-  document.body.appendChild(modal);
-}
-
-// 从历史记录恢复
-function restoreFromHistory(cdk) {
-  const history = getLocalHistory();
-  const item = history.find(h => h.cdk === cdk);
-  
-  if (!item) return;
-  
-  // 关闭弹窗
-  document.querySelector('.fixed.bg-black\\/50')?.remove();
-  
-  // 填充数据
-  if (fields.categoryName) fields.categoryName.textContent = item.category_name || '-';
-  if (fields.firstAssignment) fields.firstAssignment.textContent = item.is_first_assignment ? '首次分配' : '非首次';
-  if (fields.cardNumber) fields.cardNumber.textContent = item.card_number || '----';
-  
-  // 格式化有效期
-  const expiryVal = item.expiry || '';
-  const expParts = expiryVal.match(/^(\d{4})[\/\-](\d{1,2})$/);
-  if (fields.cardExpiry) {
-    if (expParts) {
-      fields.cardExpiry.textContent = `${expParts[2].padStart(2,'0')}/${expParts[1].slice(-2)}`;
-    } else {
-      fields.cardExpiry.textContent = expiryVal;
-    }
-  }
-  
-  if (fields.cardCvv) fields.cardCvv.textContent = item.cvv || 'Hidden';
-  if (fields.orderNo) fields.orderNo.textContent = item.order_no || '-';
-  if (fields.phoneNumber) fields.phoneNumber.textContent = item.phone || '-';
-  if (fields.holderName) fields.holderName.textContent = item.holder_name || '-';
-  if (fields.holderAddress) fields.holderAddress.textContent = item.address || '-';
-  if (fields.fullAddress) fields.fullAddress.textContent = item.address || '-';
-  
-  // 解析地址
-  const addr = item.address || '';
-  const addrParts = addr.split(',').map(p => p.trim());
-  if (addrParts.length >= 2) {
-    if (fields.streetAddress) fields.streetAddress.textContent = addrParts[0];
-    if (fields.country) fields.country.textContent = addrParts[addrParts.length - 1];
-    if (fields.cityStateZip) fields.cityStateZip.textContent = addrParts.slice(1, -1).join(', ') || '-';
-  } else {
-    if (fields.streetAddress) fields.streetAddress.textContent = addr || '-';
-    if (fields.cityStateZip) fields.cityStateZip.textContent = '-';
-    if (fields.country) fields.country.textContent = '-';
-  }
-  
-  // 格式化日期
-  const fmtDate = (str) => {
-    if (!str) return '-';
-    const d = new Date(str);
-    return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'});
-  };
-  
-  if (fields.activatedAt) fields.activatedAt.textContent = fmtDate(item.activated_at);
-  
-  const isExpired = new Date(item.expires_at) < new Date();
-  if (fields.expiresAt) {
-    fields.expiresAt.textContent = isExpired ? '已过期' : fmtDate(item.expires_at);
-    fields.expiresAt.className = isExpired ? 'text-sm font-medium text-red-600' : 'text-sm font-medium';
-  }
-  
-  if (fields.instructionText) fields.instructionText.textContent = item.instruction || '-';
-  
-  // 获取验证码
-  currentVerificationUrl = item.verification_url;
-  if (currentVerificationUrl) {
-    fetchVerificationCode();
-  }
-  
-  // 启动1小时倒计时（基于激活时间）
-  startCountdown(item.activated_at);
-}
-
 // 启动倒计时（基于激活时间的1小时）
-function startCountdown(activatedAt) {
+function startCountdown(countdownEndsAt) {
   // 清除现有的倒计时
   if (countdownInterval) {
     clearInterval(countdownInterval);
@@ -766,12 +840,15 @@ function startCountdown(activatedAt) {
   
   let timeLeft;
   
-  // 基于激活时间计算1小时倒计时
-  if (activatedAt) {
-    const activatedDate = new Date(activatedAt);
-    const expiresDate = new Date(activatedDate.getTime() + 60 * 60 * 1000); // 激活后1小时
+  // 基于固定结束时间计算剩余倒计时
+  if (countdownEndsAt) {
+    const expiresDate = new Date(countdownEndsAt);
     const now = new Date();
-    timeLeft = Math.max(0, Math.floor((expiresDate - now) / 1000));
+    if (Number.isNaN(expiresDate.getTime())) {
+      timeLeft = 60 * 60;
+    } else {
+      timeLeft = Math.max(0, Math.floor((expiresDate - now) / 1000));
+    }
   } else {
     // 默认1小时
     timeLeft = 60 * 60;
@@ -828,4 +905,44 @@ function stopCountdown() {
     countdownTimer.textContent = "01:00:00";
     countdownTimer.className = "text-xl font-bold font-mono text-emerald-600 tracking-wider";
   }
+}
+
+function buildCountdownEndsAt(activatedAt, fallbackStartedAt = new Date().toISOString()) {
+  const baseDate = parseCountdownBaseDate(activatedAt) || parseCountdownBaseDate(fallbackStartedAt);
+  if (!baseDate) {
+    return null;
+  }
+
+  return new Date(baseDate.getTime() + 60 * 60 * 1000).toISOString();
+}
+
+function resolveCurrentCardCountdownEndAt(currentCardState) {
+  if (currentCardState?.countdownEndsAt) {
+    return currentCardState.countdownEndsAt;
+  }
+
+  const activatedCountdownEndsAt = buildCountdownEndsAt(currentCardState?.item?.activatedAt);
+  if (activatedCountdownEndsAt) {
+    return activatedCountdownEndsAt;
+  }
+
+  const historyItem = getLocalHistory().find((item) => item.cdk === currentCardState?.cdk);
+  if (historyItem?.redeemed_at) {
+    return buildCountdownEndsAt(null, historyItem.redeemed_at);
+  }
+
+  if (currentCardState?.savedAt) {
+    return buildCountdownEndsAt(null, currentCardState.savedAt);
+  }
+
+  return null;
+}
+
+function parseCountdownBaseDate(input) {
+  if (!input || input === "-") {
+    return null;
+  }
+
+  const date = new Date(input);
+  return Number.isNaN(date.getTime()) ? null : date;
 }

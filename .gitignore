@@ -13,10 +13,12 @@ yarn-error.log
 *.db
 *.sqlite
 *.sqlite3
+redeem_history.csv
 
 # Logs
 logs/
 *.log
+.run/
 
 # OS files
 .DS_Store

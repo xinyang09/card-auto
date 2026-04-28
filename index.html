@@ -4,8 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Card Auto Preview</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./styles.css">
     <style>
+        body {
+            background:
+                radial-gradient(circle at top left, rgba(191, 219, 254, 0.58), transparent 28%),
+                linear-gradient(180deg, #f4f8ff 0%, #f8fafc 42%, #f5f5f5 100%);
+            color: #171717;
+        }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -17,99 +23,1258 @@
         .glass-effect {
             backdrop-filter: blur(16px);
         }
+        .content-shell {
+            position: relative;
+            width: 100%;
+            margin: 0 auto;
+            padding: 1.5rem 1.25rem 2.5rem;
+        }
+        @media (min-width: 768px) {
+            .content-shell {
+                padding: 2rem 2.25rem 3rem;
+            }
+        }
+        @media (min-width: 1024px) {
+            .content-shell {
+                width: min(calc(100% - 3rem), 68rem);
+                max-width: none;
+                margin: 0 auto 0 0;
+                padding: 2rem 2.75rem 3rem;
+            }
+        }
+        @media (min-width: 1440px) {
+            .content-shell {
+                width: min(calc(100% - 4rem), 72rem);
+                padding-inline: 3rem;
+            }
+        }
+        .token-status.is-ready {
+            border-color: #86efac;
+            background: #f0fdf4;
+        }
+        .token-status.is-ready .status-dot {
+            background: #22c55e !important;
+        }
+        .token-status.is-ready #tokenStatusText {
+            color: #15803d;
+        }
+        .sidebar-panel {
+            position: sticky;
+            top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-height: calc(100vh - 2rem);
+            padding: 1.5rem;
+            border-radius: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.82);
+            background:
+                radial-gradient(circle at top, rgba(255, 255, 255, 0.75), transparent 45%),
+                linear-gradient(180deg, rgba(219, 234, 254, 0.94) 0%, rgba(231, 241, 255, 0.9) 55%, rgba(219, 234, 254, 0.84) 100%);
+            box-shadow:
+                0 24px 50px rgba(148, 163, 184, 0.16),
+                inset 0 1px 0 rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(20px);
+            overflow: hidden;
+        }
+        .sidebar-panel::before,
+        .sidebar-panel::after {
+            content: "";
+            position: absolute;
+            border-radius: 999px;
+            pointer-events: none;
+            filter: blur(10px);
+        }
+        .sidebar-panel::before {
+            top: -4.5rem;
+            right: -2.75rem;
+            width: 11rem;
+            height: 11rem;
+            background: rgba(255, 255, 255, 0.4);
+        }
+        .sidebar-panel::after {
+            bottom: -4rem;
+            left: -2rem;
+            width: 8rem;
+            height: 8rem;
+            background: rgba(191, 219, 254, 0.45);
+        }
+        .sidebar-header,
+        .sidebar-group {
+            position: relative;
+            z-index: 1;
+        }
+        .sidebar-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            background: rgba(255, 255, 255, 0.46);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #334155;
+            width: fit-content;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+        }
+        .sidebar-chip-dot {
+            width: 0.45rem;
+            height: 0.45rem;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.16);
+        }
+        .sidebar-title {
+            margin-top: 1rem;
+            font-size: 1.5rem;
+            line-height: 1.2;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            color: #0f172a;
+        }
+        .sidebar-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+        .sidebar-group-label {
+            padding-left: 0.15rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .sidebar-divider {
+            height: 1px;
+            margin: 0.1rem 0 0.05rem;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(148, 163, 184, 0.45), rgba(255, 255, 255, 0));
+        }
+        .sidebar-item {
+            width: 100%;
+            min-height: 4.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.95rem;
+            padding: 0.95rem 1rem;
+            border-radius: 1.4rem;
+            border: 1px solid rgba(255, 255, 255, 0.58);
+            background: rgba(255, 255, 255, 0.42);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+            color: #0f172a;
+            text-align: left;
+            transition:
+                transform 180ms ease,
+                background-color 180ms ease,
+                border-color 180ms ease,
+                box-shadow 180ms ease;
+        }
+        .sidebar-item:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.7);
+            border-color: rgba(147, 197, 253, 0.95);
+            box-shadow:
+                0 16px 32px rgba(148, 163, 184, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
+        .sidebar-item:focus-visible {
+            outline: 3px solid rgba(59, 130, 246, 0.2);
+            outline-offset: 3px;
+        }
+        .sidebar-item.is-active {
+            background: linear-gradient(135deg, rgba(239, 246, 255, 0.98) 0%, rgba(191, 219, 254, 0.96) 100%);
+            border-color: rgba(96, 165, 250, 0.68);
+            box-shadow:
+                0 20px 36px rgba(96, 165, 250, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.75);
+        }
+        .sidebar-item__icon {
+            width: 2.85rem;
+            height: 2.85rem;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            background: rgba(255, 255, 255, 0.68);
+            color: #1d4ed8;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+        }
+        .sidebar-item.is-active .sidebar-item__icon {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(219, 234, 254, 0.98) 100%);
+            color: #1e40af;
+        }
+        .sidebar-item__content {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            flex: 1;
+        }
+        .sidebar-item__title {
+            font-size: 1rem;
+            line-height: 1.25;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            color: #0f172a;
+        }
+        .sidebar-item__meta {
+            font-size: 0.76rem;
+            line-height: 1.45;
+            color: #64748b;
+        }
+        .sidebar-item__tail {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+        }
+        .sidebar-item__indicator {
+            width: 0.6rem;
+            height: 0.6rem;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+            box-shadow: 0 0 0 0.35rem rgba(59, 130, 246, 0.15);
+            opacity: 0;
+            transform: scale(0.6);
+            transition: opacity 180ms ease, transform 180ms ease;
+        }
+        .sidebar-item.is-active .sidebar-item__indicator {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .sidebar-item__arrow {
+            transition: transform 180ms ease, color 180ms ease;
+        }
+        .sidebar-link:hover .sidebar-item__arrow {
+            transform: translateX(2px);
+            color: #475569;
+        }
+        .sidebar-item.is-disabled {
+            opacity: 0.6;
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.24);
+            box-shadow: none;
+        }
+        .sidebar-item.is-disabled:hover {
+            transform: none;
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.24);
+            box-shadow: none;
+        }
+        .sidebar-item.is-disabled .sidebar-item__icon {
+            background: rgba(255, 255, 255, 0.45);
+            color: #94a3b8;
+        }
+        .sidebar-item.is-disabled .sidebar-item__title,
+        .sidebar-item.is-disabled .sidebar-item__meta,
+        .sidebar-item.is-disabled .sidebar-item__tail {
+            color: #94a3b8;
+        }
+        .content-shell {
+            isolation: isolate;
+        }
+        .content-shell::before,
+        .content-shell::after {
+            content: "";
+            position: absolute;
+            border-radius: 999px;
+            pointer-events: none;
+            filter: blur(36px);
+            opacity: 0.78;
+            z-index: -1;
+        }
+        .content-shell::before {
+            top: 2.5rem;
+            right: 6%;
+            width: 15rem;
+            height: 15rem;
+            background: rgba(219, 234, 254, 0.62);
+        }
+        .content-shell::after {
+            left: 8%;
+            bottom: 2rem;
+            width: 13rem;
+            height: 13rem;
+            background: rgba(255, 255, 255, 0.72);
+        }
+        #redeemForm,
+        #addressGenerator,
+        #infoSection > section,
+        #historySection {
+            position: relative;
+            border: 1px solid rgba(203, 213, 225, 0.78);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.94) 100%);
+            box-shadow:
+                0 20px 44px rgba(148, 163, 184, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(18px);
+            overflow: hidden;
+        }
+        #redeemForm::before,
+        #addressGenerator::before,
+        #infoSection > section::before,
+        #historySection::before,
+        #cardViewSection section::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), transparent 42%);
+            pointer-events: none;
+        }
+        #redeemForm {
+            max-width: none;
+            margin-bottom: 1.35rem;
+            padding: 0.95rem;
+            border-radius: 1.75rem;
+        }
+        #redeemForm > div,
+        #addressGenerator > div,
+        #historySection > *,
+        #infoSection > section > * {
+            position: relative;
+            z-index: 1;
+        }
+        #redeemForm > div {
+            align-items: stretch;
+            gap: 0.9rem;
+        }
+        #cdkInput {
+            height: 4rem;
+            border-width: 1px;
+            border-color: rgba(148, 163, 184, 0.42);
+            border-radius: 1.2rem;
+            background: rgba(255, 255, 255, 0.82);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+        #cdkInput:focus {
+            border-color: rgba(59, 130, 246, 0.8);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.92),
+                0 0 0 0.25rem rgba(59, 130, 246, 0.12);
+        }
+        #redeemButton {
+            min-width: 8.8rem;
+            height: 4rem;
+            border-radius: 1.2rem;
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            box-shadow: 0 18px 30px rgba(15, 23, 42, 0.18);
+        }
+        #addressGenerator {
+            margin-bottom: 1.35rem;
+            padding: 1.35rem;
+            border-radius: 1.8rem;
+            background:
+                radial-gradient(circle at top right, rgba(219, 234, 254, 0.7), transparent 28%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.96) 100%);
+        }
+        #addressGenerator > div:first-child {
+            margin-bottom: 1rem;
+        }
+        #addressGenerator h3 {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.7rem;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: #0f172a;
+        }
+        #addressGenerator h3 svg {
+            width: 1.15rem;
+            height: 1.15rem;
+            color: #2563eb;
+        }
+        #addressGenerator button[onclick="generateRandomAddress()"] {
+            padding: 0.75rem 1rem;
+            border-radius: 1rem;
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            box-shadow: 0 14px 26px rgba(15, 23, 42, 0.14);
+        }
+        #addressGenerator .grid {
+            gap: 0.85rem;
+        }
+        #addressGenerator .grid > div {
+            min-height: 5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 0.95rem 1rem;
+            border-radius: 1.15rem;
+            border: 1px solid rgba(226, 232, 240, 0.96);
+            background: rgba(255, 255, 255, 0.76);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+        #addressGenerator .grid > div p:first-child {
+            margin-bottom: 0.45rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+        #addressGenerator .grid > div p:last-child {
+            font-size: 0.95rem;
+            line-height: 1.55;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        #cardViewSection {
+            gap: 1rem;
+            margin-bottom: 1.35rem;
+            align-items: stretch;
+        }
+        #cardViewSection > div:first-child {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+        #cardViewSection > div:first-child > div {
+            padding: 1rem 1rem 1.05rem;
+            border-radius: 1.35rem;
+            border: 1px solid rgba(203, 213, 225, 0.78);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(248, 250, 252, 0.9) 100%);
+            box-shadow:
+                0 14px 28px rgba(148, 163, 184, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.76);
+        }
+        #cardViewSection > div:first-child > div:last-child {
+            background: linear-gradient(155deg, rgba(219, 234, 254, 0.96) 0%, rgba(239, 246, 255, 0.95) 100%);
+            border-color: rgba(147, 197, 253, 0.7);
+            box-shadow:
+                0 18px 30px rgba(96, 165, 250, 0.16),
+                inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        }
+        #cardViewSection > div:first-child > div p:first-child {
+            margin-bottom: 0.65rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            color: #64748b;
+        }
+        #cardViewSection section {
+            position: relative;
+            height: 100%;
+            padding: 1.75rem;
+            border-radius: 2rem;
+            border: 1px solid rgba(191, 219, 254, 0.74);
+            background:
+                radial-gradient(circle at top right, rgba(255, 255, 255, 0.92), transparent 26%),
+                linear-gradient(145deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 250, 252, 0.96) 52%, rgba(219, 234, 254, 0.9) 100%);
+            box-shadow:
+                0 28px 52px rgba(148, 163, 184, 0.18),
+                inset 0 1px 0 rgba(255, 255, 255, 0.84);
+        }
+        #categoryName {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.42rem 0.78rem;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(255, 255, 255, 0.58);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+        }
+        #cardNumber {
+            letter-spacing: 0.12em;
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+        #cardExpiry,
+        #cardCvv,
+        #countdownTimer {
+            font-variant-numeric: tabular-nums;
+        }
+        #countdownTimer {
+            font-size: 1.95rem;
+            line-height: 1;
+            color: #0f172a;
+        }
+        #infoSection {
+            gap: 1rem;
+            margin-bottom: 1.35rem;
+        }
+        #infoSection > section {
+            padding: 1.45rem;
+            border-radius: 1.8rem;
+        }
+        #infoSection > section h3,
+        #historySection h3 {
+            font-size: 0.76rem;
+            letter-spacing: 0.18em;
+            color: #475569;
+        }
+        #infoSection .space-y-4 > div {
+            position: relative;
+        }
+        #infoSection .space-y-4 > div:not(:last-child) {
+            border-bottom-color: rgba(226, 232, 240, 0.9);
+        }
+        #instructionText {
+            color: #475569;
+        }
+        #refreshCode {
+            border-radius: 0.9rem;
+            border-color: rgba(203, 213, 225, 0.9);
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        }
+        #historySection {
+            margin-bottom: 1.35rem;
+            padding: 1.45rem;
+            border-radius: 1.8rem;
+        }
+        #paylinkForm {
+            position: relative;
+            max-width: none;
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            border-radius: 2rem;
+            border: 1px solid rgba(191, 219, 254, 0.78);
+            background:
+                radial-gradient(circle at top right, rgba(255, 255, 255, 0.94), transparent 28%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.96) 54%, rgba(219, 234, 254, 0.84) 100%);
+            box-shadow:
+                0 30px 56px rgba(148, 163, 184, 0.16),
+                inset 0 1px 0 rgba(255, 255, 255, 0.86);
+            overflow: hidden;
+        }
+        #paylinkForm::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at top left, rgba(191, 219, 254, 0.24), transparent 22%),
+                linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 40%);
+            pointer-events: none;
+        }
+        #paylinkForm > * {
+            position: relative;
+            z-index: 1;
+        }
+        .paylink-hero {
+            margin-bottom: 1.35rem;
+            padding-bottom: 1.35rem;
+            border-bottom-color: rgba(203, 213, 225, 0.74);
+        }
+        .paylink-hero-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 1rem;
+            align-items: start;
+        }
+        .paylink-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.7rem 1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(191, 219, 254, 0.8);
+            background: rgba(255, 255, 255, 0.72);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #475569;
+        }
+        .paylink-eyebrow-dot {
+            width: 0.6rem;
+            height: 0.6rem;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #334155 0%, #64748b 100%);
+        }
+        .paylink-hero h3 {
+            margin-top: 1rem;
+            font-size: 2.25rem;
+            line-height: 1.1;
+            letter-spacing: -0.04em;
+            color: #0f172a;
+        }
+        .paylink-hero p {
+            max-width: 42rem;
+            margin-top: 1rem;
+            font-size: 1rem;
+            line-height: 1.75;
+            color: #475569;
+        }
+        #planPreviewChip.paylink-current-plan {
+            padding: 0.95rem 1.2rem;
+            border-radius: 1.4rem;
+            border-color: rgba(191, 219, 254, 0.9);
+            background: rgba(255, 255, 255, 0.76);
+            box-shadow:
+                0 16px 28px rgba(148, 163, 184, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.86);
+            color: #334155;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+        .paylink-block {
+            border: 1px solid rgba(203, 213, 225, 0.82);
+            border-radius: 1.8rem;
+            background: rgba(255, 255, 255, 0.72);
+            box-shadow:
+                0 18px 36px rgba(148, 163, 184, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        }
+        .paylink-plans {
+            padding: 1.25rem;
+        }
+        .paylink-section-head {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        .paylink-section-icon {
+            width: 2.8rem;
+            height: 2.8rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1rem;
+            border: 1px solid rgba(191, 219, 254, 0.8);
+            background: rgba(255, 255, 255, 0.82);
+            color: #1d4ed8;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+        }
+        .paylink-section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        #plans {
+            gap: 1rem;
+        }
+        .plan-card {
+            position: relative;
+            overflow: hidden;
+            padding: 1.5rem;
+            border-width: 1px;
+            border-color: rgba(203, 213, 225, 0.9);
+            border-radius: 1.65rem;
+            background:
+                radial-gradient(circle at top right, rgba(255, 255, 255, 0.92), transparent 34%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.9) 100%);
+            box-shadow:
+                0 16px 30px rgba(148, 163, 184, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.84);
+            transition:
+                transform 180ms ease,
+                border-color 180ms ease,
+                box-shadow 180ms ease,
+                background 180ms ease;
+        }
+        .plan-card:hover {
+            transform: translateY(-1px);
+            border-color: rgba(147, 197, 253, 0.9);
+            box-shadow:
+                0 22px 36px rgba(148, 163, 184, 0.14),
+                inset 0 1px 0 rgba(255, 255, 255, 0.88);
+        }
+        .plan-card.active {
+            border-color: rgba(59, 130, 246, 0.9);
+            background:
+                radial-gradient(circle at top right, rgba(255, 255, 255, 0.98), transparent 32%),
+                linear-gradient(150deg, rgba(239, 246, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 58%, rgba(219, 234, 254, 0.9) 100%);
+            box-shadow:
+                0 28px 44px rgba(96, 165, 250, 0.18),
+                inset 0 1px 0 rgba(255, 255, 255, 0.92);
+        }
+        .plan-card-topbar {
+            position: absolute;
+            inset-inline: 0;
+            top: 0;
+            height: 0.28rem;
+            background: linear-gradient(90deg, rgba(148, 163, 184, 0.5), rgba(226, 232, 240, 0.9));
+            transition: background 180ms ease;
+        }
+        .plan-card.active .plan-card-topbar {
+            background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+        }
+        .plan-card .check-dot {
+            opacity: 0;
+            transform: scale(0.72);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 18px 28px rgba(59, 130, 246, 0.24);
+            transition: opacity 180ms ease, transform 180ms ease;
+        }
+        .plan-card.active .check-dot {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .plan-card:not(.active) .check-dot {
+            pointer-events: none;
+        }
+        .paylink-token-panel {
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        #tokenInput {
+            min-height: 12rem;
+            border-color: rgba(191, 219, 254, 0.64);
+            border-radius: 1.35rem;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+            font-size: 0.98rem;
+            line-height: 1.7;
+        }
+        #tokenInput:focus {
+            border-color: rgba(59, 130, 246, 0.84);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.92),
+                0 0 0 0.28rem rgba(59, 130, 246, 0.12);
+        }
+        #clearPaylinkBtn {
+            height: 2.9rem;
+            padding-inline: 1rem;
+            border-radius: 999px;
+            border-color: rgba(191, 219, 254, 0.76);
+            background: rgba(255, 255, 255, 0.84);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+        }
+        #tokenStatus {
+            padding-inline: 0.95rem;
+            padding-block: 0.55rem;
+            border-radius: 999px;
+            border-color: rgba(191, 219, 254, 0.76);
+            background: rgba(239, 246, 255, 0.64);
+        }
+        .paylink-guide {
+            margin-top: 1rem;
+            padding: 1rem 1rem 1rem 0.95rem;
+            border-radius: 1.4rem;
+            border-color: rgba(191, 219, 254, 0.74);
+            background:
+                linear-gradient(180deg, rgba(239, 246, 255, 0.82) 0%, rgba(255, 255, 255, 0.84) 100%);
+        }
+        #generatePaylinkBtn {
+            height: 4.4rem;
+            border-radius: 1.5rem;
+            background: linear-gradient(135deg, #111827 0%, #1e293b 100%);
+            box-shadow: 0 24px 40px rgba(15, 23, 42, 0.2);
+            font-size: 1.05rem;
+        }
+        #generatePaylinkBtn:hover {
+            box-shadow: 0 28px 46px rgba(15, 23, 42, 0.24);
+        }
+        #generatePaylinkBtn:disabled {
+            opacity: 0.82;
+        }
+        #errorBox {
+            border-color: rgba(248, 113, 113, 0.36);
+            background: linear-gradient(180deg, rgba(254, 242, 242, 0.96) 0%, rgba(255, 255, 255, 0.92) 100%);
+        }
+        #resultBox.paylink-result-box {
+            padding: 1.25rem;
+            border-color: rgba(191, 219, 254, 0.78);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 250, 252, 0.96) 100%);
+            box-shadow:
+                0 20px 36px rgba(148, 163, 184, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.86);
+        }
+        .paylink-link-card {
+            border-color: rgba(203, 213, 225, 0.82);
+            border-radius: 1.25rem;
+            background: rgba(255, 255, 255, 0.86);
+            box-shadow:
+                0 14px 26px rgba(148, 163, 184, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.86);
+        }
+        .paylink-link-card:hover {
+            border-color: rgba(147, 197, 253, 0.92);
+            background: rgba(255, 255, 255, 0.96);
+        }
+        .paylink-result-action {
+            height: 2.9rem;
+            border-radius: 1rem;
+            border-color: rgba(203, 213, 225, 0.86);
+            background: rgba(255, 255, 255, 0.84);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+        }
+        .paylink-result-action:hover {
+            border-color: rgba(147, 197, 253, 0.88);
+            background: rgba(255, 255, 255, 0.96);
+        }
+        @media (max-width: 1023px) {
+            #paylinkForm {
+                padding: 1.15rem;
+                border-radius: 1.6rem;
+            }
+            .paylink-hero-grid {
+                grid-template-columns: 1fr;
+            }
+            .paylink-hero h3 {
+                font-size: 1.8rem;
+            }
+            .paylink-token-panel,
+            .paylink-plans,
+            #resultBox.paylink-result-box {
+                padding: 1rem;
+            }
+        }
+        #localHistoryList > p,
+        #localHistoryList details {
+            border-color: rgba(203, 213, 225, 0.8);
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow:
+                0 12px 24px rgba(148, 163, 184, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+        #localHistoryList summary {
+            padding: 0.95rem 1rem;
+        }
+        #localHistoryList pre {
+            border-top-color: rgba(226, 232, 240, 0.92);
+            background: rgba(248, 250, 252, 0.88);
+        }
+        button[onclick^="copyToClipboard"] {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.35rem;
+            min-height: 2.35rem;
+            border-radius: 0.9rem;
+            border: 1px solid rgba(203, 213, 225, 0.82);
+            background: rgba(255, 255, 255, 0.76);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+            transition:
+                transform 180ms ease,
+                background-color 180ms ease,
+                border-color 180ms ease,
+                box-shadow 180ms ease;
+        }
+        button[onclick^="copyToClipboard"]:hover {
+            transform: translateY(-1px);
+            border-color: rgba(147, 197, 253, 0.9);
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow:
+                0 12px 22px rgba(148, 163, 184, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.88);
+        }
+        @media (max-width: 1023px) {
+            #redeemForm {
+                padding: 0.85rem;
+            }
+            #cardViewSection section,
+            #infoSection > section,
+            #addressGenerator,
+            #historySection {
+                padding: 1.2rem;
+            }
+            #cardNumber {
+                font-size: 1.9rem;
+                line-height: 1.2;
+            }
+        }
     </style>
 </head>
-<body class="min-h-screen bg-neutral-950">
-    <main class="max-w-6xl mx-auto px-4 py-10 sm:py-12">
+<body class="min-h-screen bg-neutral-100">
+    <div class="flex h-screen">
+        <!-- 左侧功能面板 -->
+        <aside class="w-80 p-4 flex-shrink-0">
+            <div class="sidebar-panel">
+                <div class="sidebar-header">
+                    <div class="sidebar-chip">
+                        <span class="sidebar-chip-dot"></span>
+                        Card Auto
+                    </div>
+                    <h1 class="sidebar-title">功能导航</h1>
+                </div>
+
+                <div class="sidebar-group">
+                    <span class="sidebar-group-label">核心功能</span>
+                    <div class="sidebar-nav">
+                        <button class="sidebar-item sidebar-tab redeem-tab is-active" data-function="redeem" type="button">
+                            <span class="sidebar-item__icon" aria-hidden="true">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="5" width="18" height="14" rx="3" />
+                                    <path d="M3 10h18" />
+                                    <path d="M7 15h3" />
+                                </svg>
+                            </span>
+                            <span class="sidebar-item__content">
+                                <span class="sidebar-item__title">兑卡</span>
+                                <span class="sidebar-item__meta">卡片兑换面板</span>
+                            </span>
+                            <span class="sidebar-item__tail">
+                                <span class="sidebar-item__indicator"></span>
+                            </span>
+                        </button>
+                        <button class="sidebar-item sidebar-tab paylink-tab" data-function="paylink" type="button">
+                            <span class="sidebar-item__icon" aria-hidden="true">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M10 13a5 5 0 0 1 0-7l1.5-1.5a5 5 0 0 1 7 7L17 13" />
+                                    <path d="M14 11a5 5 0 0 1 0 7L12.5 19.5a5 5 0 0 1-7-7L7 11" />
+                                </svg>
+                            </span>
+                            <span class="sidebar-item__content">
+                                <span class="sidebar-item__title">生成支付链接</span>
+                                <span class="sidebar-item__meta">订阅支付创建</span>
+                            </span>
+                            <span class="sidebar-item__tail">
+                                <span class="sidebar-item__indicator"></span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sidebar-divider" aria-hidden="true"></div>
+
+                <div class="sidebar-group">
+                    <span class="sidebar-group-label">快捷入口</span>
+                    <div class="sidebar-nav">
+                        <a
+                            id="tutorialLink"
+                            class="sidebar-item sidebar-link is-disabled"
+                            href="#"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-disabled="true"
+                            tabindex="-1"
+                        >
+                            <span class="sidebar-item__icon" aria-hidden="true">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                                    <path d="M6.5 3H20v18H6.5A2.5 2.5 0 0 1 4 18.5V5.5A2.5 2.5 0 0 1 6.5 3Z" />
+                                </svg>
+                            </span>
+                            <span class="sidebar-item__content">
+                                <span class="sidebar-item__title">教程</span>
+                                <span class="sidebar-item__meta">使用说明与流程</span>
+                            </span>
+                            <span class="sidebar-item__tail" aria-hidden="true">
+                                <svg class="sidebar-item__arrow w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M5 12h14" />
+                                    <path d="m13 5 7 7-7 7" />
+                                </svg>
+                            </span>
+                        </a>
+                        <a
+                            id="buyCardLink"
+                            class="sidebar-item sidebar-link is-disabled"
+                            href="#"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-disabled="true"
+                            tabindex="-1"
+                        >
+                            <span class="sidebar-item__icon" aria-hidden="true">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="9" cy="20" r="1.5" />
+                                    <circle cx="18" cy="20" r="1.5" />
+                                    <path d="M3 4h2l2.4 10.2A2 2 0 0 0 9.36 16h8.95a2 2 0 0 0 1.96-1.6L21 8H7.1" />
+                                </svg>
+                            </span>
+                            <span class="sidebar-item__content">
+                                <span class="sidebar-item__title">购卡</span>
+                            </span>
+                            <span class="sidebar-item__tail" aria-hidden="true">
+                                <svg class="sidebar-item__arrow w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M5 12h14" />
+                                    <path d="m13 5 7 7-7 7" />
+                                </svg>
+                            </span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
         
-        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            <!-- 左侧功能面板 -->
-            <article class="lg:col-span-2 bg-neutral-900/80 glass-effect rounded-3xl border border-neutral-800 p-6">
-                <h2 class="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-6">
-                    功能
-                </h2>
-                
-                <div class="flex flex-col gap-3">
-                    <button class="redeem-tab active px-5 py-4 rounded-2xl bg-white text-neutral-900 font-semibold tracking-wide transition-all duration-300 hover:bg-neutral-200" data-function="redeem">
-                        <span class="flex items-center gap-4">
-                            <span class="text-2xl">💳</span>
-                            <span>兑卡</span>
-                        </span>
-                    </button>
-                </div>
-            </article>
-
-            <!-- 右侧预览面板 -->
-            <article class="lg:col-span-9 glass-effect bg-neutral-900/80 rounded-3xl border border-neutral-800 p-8 relative">
-                
-                <!-- 右上角历史按钮 -->
-                <div class="absolute top-6 right-6 flex gap-3">
-                    <button onclick="showHistoryModal()" class="px-5 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-300 text-sm font-medium transition-all duration-300 hover:bg-neutral-700 hover:border-neutral-600">
-                        <span class="flex items-center gap-2">
-                            <span class="text-lg">📋</span>
-                            <span>历史</span>
-                        </span>
-                    </button>
-                </div>
-
-                <!-- 兑换表单 -->
-                <form id="redeemForm" class="relative mb-8 max-w-xl">
+        <!-- 右侧内容区域 -->
+        <main class="flex-1 overflow-y-auto">
+        <div class="content-shell">
+            <!-- 兑换表单 -->
+            <form id="redeemForm" class="redeem-content relative mb-8 max-w-xl">
                     <div class="flex flex-col sm:flex-row gap-4">
                         <div class="flex-1 relative">
-                            <label class="block text-neutral-400 text-sm font-medium mb-3 tracking-wide">CDK</label>
                             <input
                                 id="cdkInput"
-                                class="w-full h-14 px-5 rounded-xl bg-neutral-800 border-2 border-neutral-700 text-white text-lg focus:outline-none focus:border-neutral-500 transition-all duration-300 placeholder-neutral-600"
+                                class="w-full h-14 px-5 rounded-xl bg-neutral-50 border-2 border-neutral-300 text-neutral-900 text-lg focus:outline-none focus:border-blue-500 transition-all duration-300 placeholder-neutral-400"
                                 type="text"
-                                placeholder="输入兑换码..."
+                                placeholder="请输入CDK"
                                 autocomplete="off"
                                 aria-label="兑换码输入框"
                             />
                         </div>
                         <div class="flex items-end">
-                            <button id="redeemButton" class="h-14 px-10 rounded-xl bg-white text-neutral-900 text-base font-bold tracking-wide transition-all duration-300 hover:bg-neutral-200 active:scale-95" type="submit">
+                            <button id="redeemButton" class="h-14 px-10 rounded-xl bg-neutral-900 text-white text-base font-bold tracking-wide transition-all duration-300 hover:bg-neutral-800 active:scale-95" type="submit">
                                 立即兑换
                             </button>
                         </div>
                     </div>
                 </form>
 
+                <!-- 支付链接生成表单 -->
+                <div id="paylinkForm" class="paylink-content relative mb-8 max-w-3xl hidden">
+                    <!-- 头部 -->
+                    <div class="paylink-hero mb-6 pb-5 border-b border-neutral-200">
+                        <div class="paylink-hero-grid flex items-start justify-between gap-4 mb-2">
+                            <div>
+                                <div class="paylink-eyebrow inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-neutral-300 bg-neutral-100 text-xs font-semibold text-neutral-600 uppercase tracking-wider mb-3">
+                                    <span class="paylink-eyebrow-dot w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+                                    Payment Link Generator
+                                </div>
+                                <h3 class="text-xl font-bold text-neutral-900 tracking-tight">订阅支付创建面板</h3>
+                                <p class="mt-2 text-sm text-neutral-600 leading-relaxed max-w-lg">
+                                    支持直接粘贴 Access Token 或完整 session 文本，自动提取 accessToken 并生成 ChatGPT Plus / Team 订阅支付链接。
+                                </p>
+                            </div>
+                            <div class="paylink-current-plan px-4 py-2 rounded-xl border border-neutral-300 bg-neutral-100 text-sm text-neutral-600 font-medium" id="planPreviewChip">
+                                当前方案：Team
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 计划选择 -->
+                    <div class="paylink-block paylink-plans mb-6">
+                        <div class="paylink-section-head flex items-center gap-3 mb-4">
+                            <div class="paylink-section-icon w-7 h-7 rounded-lg border border-neutral-300 bg-neutral-100 flex items-center justify-center">
+                                <svg class="w-3.5 h-3.5 text-neutral-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 7h16" />
+                                    <path d="M6 7l1.4 10.2A2 2 0 0 0 9.38 19h5.24a2 2 0 0 0 1.98-1.8L18 7" />
+                                    <path d="M9 11h6" />
+                                </svg>
+                            </div>
+                            <span class="paylink-section-title text-sm font-semibold text-neutral-900">选择订阅方案</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="plans">
+                            <!-- Team 计划卡片 -->
+                            <div class="plan-card active relative overflow-hidden rounded-2xl border-2 bg-white p-5 cursor-pointer transition-all duration-300 hover:shadow-lg group" data-plan="team" onclick="selectPlan('team')">
+                                <div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                <div class="plan-card-topbar absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
+                                <div class="relative z-10 flex justify-between items-start gap-4">
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-3 flex-wrap mb-2">
+                                            <span class="text-base font-bold text-neutral-900">Team</span>
+                                            <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">推荐</span>
+                                        </div>
+                                        <p class="text-sm text-neutral-600 leading-relaxed">团队协作，最多5人</p>
+                                    </div>
+                                    <div class="flex flex-col items-end gap-3">
+                                        <div class="check-dot w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center shadow-lg transform scale-110">
+                                            <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="20 6 9 17 4 12" />
+                                            </svg>
+                                        </div>
+                                        <span class="text-2xl font-bold text-neutral-900 tracking-tight">$0</span>
+                                        <span class="text-xs text-neutral-500">/月</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Plus 计划卡片 -->
+                            <div class="plan-card relative overflow-hidden rounded-2xl border-2 border-neutral-200 bg-white p-5 cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-neutral-300 group" data-plan="plus" onclick="selectPlan('plus')">
+                                <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                <div class="plan-card-topbar absolute inset-x-0 top-0 h-1 bg-neutral-300 group-hover:bg-neutral-400 transition-colors duration-300"></div>
+                                <div class="relative z-10 flex justify-between items-start gap-4">
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-3 flex-wrap mb-2">
+                                            <span class="text-base font-bold text-neutral-900">Plus</span>
+                                        </div>
+                                        <p class="text-sm text-neutral-600 leading-relaxed">个人专业版</p>
+                                    </div>
+                                    <div class="flex flex-col items-end gap-3">
+                                        <div class="check-dot w-8 h-8 rounded-full bg-neutral-300 flex items-center justify-center shadow-md group-hover:bg-neutral-400 transition-all duration-300">
+                                            <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="20 6 9 17 4 12" />
+                                            </svg>
+                                        </div>
+                                        <span class="text-2xl font-bold text-neutral-900 tracking-tight">$0</span>
+                                        <span class="text-xs text-neutral-500">/月</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Token 输入区域 -->
+                    <div class="paylink-block paylink-token-panel rounded-2xl border border-neutral-200 bg-neutral-50 p-4 mb-4 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3 flex-wrap">
+                                <div class="w-8 h-8 rounded-xl border border-neutral-300 bg-neutral-100 flex items-center justify-center">
+                                    <svg class="w-3.5 h-3.5 text-neutral-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M7 10V8a5 5 0 1 1 10 0v2" />
+                                        <rect x="4" y="10" width="16" height="10" rx="2" />
+                                        <path d="M12 14v2" />
+                                    </svg>
+                                </div>
+                                <span class="text-sm font-medium text-neutral-900">Access Token</span>
+                                <div class="token-status inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-neutral-300 bg-white" id="tokenStatus">
+                                    <span class="status-dot w-2 h-2 rounded-full bg-neutral-400"></span>
+                                    <span id="tokenStatusText" class="text-neutral-600 text-xs">暂未识别到 accessToken。</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="h-8 px-4 rounded-full border border-neutral-300 bg-neutral-100 text-xs font-semibold text-neutral-700 hover:bg-neutral-200 hover:border-neutral-400 transition-all" id="clearPaylinkBtn" type="button">
+                                    清空
+                                </button>
+                            </div>
+                        </div>
+                        <textarea
+                            id="tokenInput"
+                            class="w-full min-h-[120px] resize-y rounded-xl border border-neutral-300 bg-white p-4 text-sm text-neutral-900 leading-relaxed placeholder-neutral-400 focus:outline-none focus:border-blue-500 transition-all"
+                            placeholder="粘贴 Access Token、完整 JSON 响应，或包含 accessToken 的整段文本"
+                        ></textarea>
+                        <div class="paylink-guide flex items-start gap-3 mt-3 p-3 rounded-xl border border-neutral-200 bg-neutral-100">
+                            <svg class="w-4 h-4 text-neutral-500 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 10v6" />
+                                <path d="M12 7h.01" />
+                            </svg>
+                            <div class="text-xs text-neutral-600 leading-relaxed">
+                                <div class="mb-2 font-semibold text-neutral-800">使用说明</div>
+                                <ol class="list-decimal space-y-1.5 pl-4">
+                                    <li>在 <a href="https://chatgpt.com/api/auth/session" target="_blank" class="text-blue-600 hover:text-blue-700 underline underline-offset-2">chatgpt.com/api/auth/session</a> 获取 session 文本。</li>
+                                    <li>粘贴完整的 JSON 或文本到输入框。</li>
+                                    <li>页面会自动提取 accessToken。</li>
+                                    <li>选择订阅方案（Team 或 Plus）。</li>
+                                    <li>点击“生成支付链接”按钮。</li>
+                                    <li>生成成功后，可以复制或打开支付链接。</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 按钮 -->
+                    <div class="flex">
+                        <button class="h-14 w-full rounded-2xl bg-neutral-900 text-white text-base font-bold tracking-wide transition-all duration-300 hover:bg-neutral-800 active:scale-98 shadow-lg hover:shadow-xl flex items-center justify-center gap-3" id="generatePaylinkBtn" type="button">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m22 2-7 20-4-9-9-4Z" />
+                                <path d="M22 2 11 13" />
+                            </svg>
+                            <span>生成支付链接</span>
+                        </button>
+                    </div>
+
+                    <!-- 错误提示 -->
+                    <div class="error-box mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 leading-relaxed hidden" id="errorBox"></div>
+
+                    <!-- 结果展示 -->
+                    <div class="result-box paylink-result-box mt-6 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 hidden shadow-sm" id="resultBox">
+                        <div class="flex items-center justify-between gap-4 mb-4">
+                            <div>
+                                <div class="text-sm font-semibold text-neutral-900">请求结果</div>
+                                <div class="text-xs text-neutral-500 mt-0.5">请求成功后会在这里显示支付链接与返回内容。</div>
+                            </div>
+                            <div class="px-3 py-1.5 rounded-full border border-neutral-300 bg-white text-xs font-semibold text-neutral-600" id="resultBadge">已返回</div>
+                        </div>
+
+                        <!-- Stripe 链接卡片 -->
+                        <div class="link-container hidden mb-3" id="stripeLinkContainer">
+                            <a id="stripeLinkCard" class="paylink-link-card block rounded-xl border border-neutral-200 bg-white p-4 text-neutral-700 hover:border-neutral-400 hover:bg-neutral-100 transition-all group" href="#" target="_blank" rel="noopener">
+                                <div class="flex items-center justify-between gap-4">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="text-xs text-neutral-500 mb-1">Stripe 外部支付链接</div>
+                                        <div class="text-sm font-medium text-neutral-900 truncate group-hover:text-blue-600" id="stripeLinkText"></div>
+                                    </div>
+                                    <span class="text-lg text-neutral-400 group-hover:text-neutral-600">↗</span>
+                                </div>
+                            </a>
+                            <div class="flex gap-2 mt-2">
+                                <button class="result-action-btn paylink-result-action h-10 px-4 rounded-xl border border-neutral-300 bg-white text-neutral-700 text-xs font-semibold hover:bg-neutral-100 transition-all flex-1" id="copyStripeLinkBtn" type="button">复制链接</button>
+                                <button class="result-action-btn paylink-result-action h-10 px-4 rounded-xl border border-neutral-300 bg-white text-neutral-700 text-xs font-semibold hover:bg-neutral-100 transition-all flex-1" id="openStripeLinkBtn" type="button">打开链接</button>
+                            </div>
+                        </div>
+
+                        <!-- ChatGPT 链接卡片 -->
+                        <div class="link-container hidden mb-3" id="chatgptLinkContainer">
+                            <a id="chatgptLinkCard" class="paylink-link-card block rounded-xl border border-neutral-200 bg-white p-4 text-neutral-700 hover:border-neutral-400 hover:bg-neutral-100 transition-all group" href="#" target="_blank" rel="noopener">
+                                <div class="flex items-center justify-between gap-4">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="text-xs text-neutral-500 mb-1">ChatGPT 支付短链</div>
+                                        <div class="text-sm font-medium text-neutral-900 truncate group-hover:text-blue-600" id="chatgptLinkText"></div>
+                                    </div>
+                                    <span class="text-lg text-neutral-400 group-hover:text-neutral-600">↗</span>
+                                </div>
+                            </a>
+                            <div class="flex gap-2 mt-2">
+                                <button class="result-action-btn paylink-result-action h-10 px-4 rounded-xl border border-neutral-300 bg-white text-neutral-700 text-xs font-semibold hover:bg-neutral-100 transition-all flex-1" id="copyChatgptLinkBtn" type="button">复制链接</button>
+                                <button class="result-action-btn paylink-result-action h-10 px-4 rounded-xl border border-neutral-300 bg-white text-neutral-700 text-xs font-semibold hover:bg-neutral-100 transition-all flex-1" id="openChatgptLinkBtn" type="button">打开链接</button>
+                            </div>
+                        </div>
+
+                        <!-- OpenAI 链接卡片 -->
+                        <div class="link-container hidden mb-3" id="openaiLinkContainer">
+                            <a id="openaiLinkCard" class="paylink-link-card block rounded-xl border border-neutral-200 bg-white p-4 text-neutral-700 hover:border-neutral-400 hover:bg-neutral-100 transition-all group" href="#" target="_blank" rel="noopener">
+                                <div class="flex items-center justify-between gap-4">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="text-xs text-neutral-500 mb-1">OpenAI 站内长链</div>
+                                        <div class="text-sm font-medium text-neutral-900 truncate group-hover:text-blue-600" id="openaiLinkText"></div>
+                                    </div>
+                                    <span class="text-lg text-neutral-400 group-hover:text-neutral-600">↗</span>
+                                </div>
+                            </a>
+                            <div class="flex gap-2 mt-2">
+                                <button class="result-action-btn paylink-result-action h-10 px-4 rounded-xl border border-neutral-300 bg-white text-neutral-700 text-xs font-semibold hover:bg-neutral-100 transition-all flex-1" id="copyOpenaiLinkBtn" type="button">复制链接</button>
+                                <button class="result-action-btn paylink-result-action h-10 px-4 rounded-xl border border-neutral-300 bg-white text-neutral-700 text-xs font-semibold hover:bg-neutral-100 transition-all flex-1" id="openOpenaiLinkBtn" type="button">打开链接</button>
+                            </div>
+                        </div>
+
+                        <!-- 查看原始 JSON -->
+                        <details class="result-details mt-4">
+                            <summary class="list-none flex items-center gap-2 cursor-pointer text-sm text-neutral-600 hover:text-neutral-800 select-none">
+                                <span class="summary-caret transition-transform duration-200">▶</span>
+                                <span>查看原始返回 JSON</span>
+                            </summary>
+                            <pre class="result-json mt-3 overflow-x-auto rounded-xl border border-neutral-300 bg-neutral-100 p-3 text-xs text-neutral-700 leading-relaxed" id="resultJson"></pre>
+                        </details>
+                    </div>
+                </div>
+
                 <!-- 美国地址生成器 -->
-                <div class="mb-6 p-5 rounded-2xl bg-neutral-800/50 backdrop-blur-lg border border-neutral-700">
+                <div id="addressGenerator" class="redeem-content mb-6 p-5 rounded-2xl bg-neutral-50 border border-neutral-200">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-base font-semibold text-white">🗺️ 美国地址生成器</h3>
-                        <button onclick="generateRandomAddress()" class="px-4 py-2 bg-white text-neutral-900 rounded-lg font-semibold text-sm hover:bg-neutral-200 transition-all">
+                        <h3 class="text-base font-semibold text-neutral-800">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M9 18 15 6" />
+                                <path d="m3 7 6-2 6 2 6-2v12l-6 2-6-2-6 2V7Z" />
+                            </svg>
+                            <span>美国地址生成器</span>
+                        </h3>
+                        <button onclick="generateRandomAddress()" class="px-4 py-2 bg-neutral-900 text-white rounded-lg font-semibold text-sm hover:bg-neutral-800 transition-all">
                             生成地址
                         </button>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
                         <div>
                             <p class="text-neutral-500 text-xs mb-1">姓名</p>
-                            <p id="genName" class="text-white">-</p>
+                            <p id="genName" class="text-neutral-900">-</p>
                         </div>
                         <div>
                             <p class="text-neutral-500 text-xs mb-1">街道地址</p>
-                            <p id="genStreet" class="text-white">-</p>
+                            <p id="genStreet" class="text-neutral-900">-</p>
                         </div>
                         <div>
                             <p class="text-neutral-500 text-xs mb-1">城市</p>
-                            <p id="genCity" class="text-white">-</p>
+                            <p id="genCity" class="text-neutral-900">-</p>
                         </div>
                         <div>
                             <p class="text-neutral-500 text-xs mb-1">州</p>
-                            <p id="genState" class="text-white">-</p>
+                            <p id="genState" class="text-neutral-900">-</p>
                         </div>
                         <div>
                             <p class="text-neutral-500 text-xs mb-1">邮编</p>
-                            <p id="genZip" class="text-white">-</p>
+                            <p id="genZip" class="text-neutral-900">-</p>
                         </div>
                         <div class="md:col-span-2">
                             <p class="text-neutral-500 text-xs mb-1">完整地址</p>
                             <div class="flex items-center gap-2">
-                                <p id="genFullAddress" class="text-white flex-1">-</p>
-                                <button onclick="copyToClipboard('genFullAddress')" class="p-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 transition-all">
-                                    <svg class="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <p id="genFullAddress" class="text-neutral-900 flex-1">-</p>
+                                <button onclick="copyToClipboard('genFullAddress')" class="p-2 rounded-lg bg-neutral-200 hover:bg-neutral-300 transition-all">
+                                    <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                     </svg>
                                 </button>
@@ -119,34 +1284,33 @@
                 </div>
 
                 <!-- 卡片视图和信息并排 -->
-                <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+                <div id="cardViewSection" class="redeem-content grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
                     <!-- 左侧：激活时间、过期时间、卡片倒计时 -->
                     <div class="lg:col-span-1 space-y-3">
-                        <div class="p-4 rounded-xl bg-neutral-900/60 backdrop-blur-lg border border-neutral-800">
+                        <div class="p-4 rounded-xl bg-neutral-100 border border-neutral-200">
                             <p class="text-xs text-neutral-500 uppercase tracking-widest mb-2">激活时间</p>
-                            <p id="activatedAt" class="text-sm text-white">-</p>
+                            <p id="activatedAt" class="text-sm text-neutral-900">-</p>
                         </div>
-                        <div class="p-4 rounded-xl bg-neutral-900/60 backdrop-blur-lg border border-neutral-800">
+                        <div class="p-4 rounded-xl bg-neutral-100 border border-neutral-200">
                             <p class="text-xs text-neutral-500 uppercase tracking-widest mb-2">过期时间</p>
-                            <p id="expiresAt" class="text-sm text-white">-</p>
+                            <p id="expiresAt" class="text-sm text-neutral-900">-</p>
                         </div>
-                        <div class="p-4 rounded-xl bg-neutral-800/60 backdrop-blur-lg border border-neutral-700">
-                            <p class="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">卡片倒计时</p>
-                            <p id="countdownTimer" class="text-xl font-bold font-mono text-white tracking-wider">01:00:00</p>
+                        <div class="p-4 rounded-xl bg-neutral-200 border border-neutral-300">
+                            <p class="text-xs font-semibold text-neutral-600 uppercase tracking-widest mb-3">卡片倒计时</p>
+                            <p id="countdownTimer" class="text-xl font-bold font-mono text-neutral-900 tracking-wider">01:00:00</p>
                         </div>
                     </div>
                     
                     <!-- 右侧：卡片视图 -->
                     <div class="lg:col-span-4">
-                        <section class="relative p-6 rounded-3xl bg-gradient-to-br from-neutral-800 via-neutral-900 to-black text-white overflow-hidden border border-neutral-700 h-full">
-                            <div class="absolute -bottom-20 -right-20 w-60 h-60 bg-neutral-600/20 rounded-full blur-3xl"></div>
-                            <div class="absolute -top-20 -left-20 w-40 h-40 bg-neutral-500/10 rounded-full blur-2xl"></div>
+                        <section class="relative p-6 rounded-3xl bg-gradient-to-br from-neutral-200 via-neutral-100 to-white text-neutral-900 overflow-hidden border border-neutral-300 shadow-md h-full">
+                            <div class="absolute -bottom-20 -right-20 w-60 h-60 bg-neutral-300/30 rounded-full blur-3xl"></div>
+                            <div class="absolute -top-20 -left-20 w-40 h-40 bg-neutral-400/20 rounded-full blur-2xl"></div>
                             
                             <div class="relative z-10">
                                 <div class="flex justify-between items-start mb-6">
                                     <div class="flex items-center gap-3">
-                                        <span id="categoryName" class="text-lg font-bold tracking-widest text-white">-</span>
-                                        <span id="firstAssignment" class="px-3 py-1 rounded-full bg-neutral-700 border border-neutral-600 text-xs font-bold text-neutral-300">-</span>
+                                        <span id="categoryName" class="text-lg font-bold tracking-widest text-neutral-900">-</span>
                                     </div>
                                     <svg class="w-16 h-10" viewBox="0 0 64 40" fill="none">
                                         <rect width="64" height="40" rx="6" fill="#1A1F71"/>
@@ -155,9 +1319,9 @@
                                 </div>
                                 
                                 <div class="flex justify-between items-center mb-6">
-                                    <span id="cardNumber" class="text-2xl sm:text-3xl font-bold tracking-widest text-white/90">----</span>
-                                    <button onclick="copyToClipboard('cardNumber')" class="p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 transition-all border border-neutral-700">
-                                        <svg class="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <span id="cardNumber" class="text-2xl sm:text-3xl font-bold tracking-widest text-neutral-900/90">----</span>
+                                    <button onclick="copyToClipboard('cardNumber')" class="p-2 rounded-lg bg-neutral-200 hover:bg-neutral-300 transition-all border border-neutral-300">
+                                        <svg class="w-5 h-5 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                     </button>
                                 </div>
                                 
@@ -166,8 +1330,8 @@
                                         <p class="text-xs text-neutral-500 mb-2">有效期</p>
                                         <div class="flex items-center gap-2">
                                             <p id="cardExpiry" class="text-base font-bold tracking-wider">--/--</p>
-                                            <button onclick="copyToClipboard('cardExpiry')" class="p-1 rounded hover:bg-neutral-700 transition-all">
-                                                <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                            <button onclick="copyToClipboard('cardExpiry')" class="p-1 rounded hover:bg-neutral-300 transition-all">
+                                                <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                             </button>
                                         </div>
                                     </div>
@@ -175,8 +1339,8 @@
                                         <p class="text-xs text-neutral-500 mb-2">CVV</p>
                                         <div class="flex items-center gap-2">
                                             <p id="cardCvv" class="text-base font-bold tracking-wider">-</p>
-                                            <button onclick="copyToClipboard('cardCvv')" class="p-1 rounded hover:bg-neutral-700 transition-all">
-                                                <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                            <button onclick="copyToClipboard('cardCvv')" class="p-1 rounded hover:bg-neutral-300 transition-all">
+                                                <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                             </button>
                                         </div>
                                     </div>
@@ -187,108 +1351,117 @@
                 </div>
 
                 <!-- 联系信息和地址信息并排 -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div id="infoSection" class="redeem-content grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     
                     <!-- 联系信息 -->
-                    <section class="relative p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800 backdrop-blur-lg">
-                        <h3 class="text-sm font-bold text-neutral-400 tracking-widest mb-5">
+                    <section class="relative p-6 rounded-2xl bg-neutral-100 border border-neutral-200">
+                        <h3 class="text-sm font-bold text-neutral-600 tracking-widest mb-5">
                             联系信息
                         </h3>
                         
                         <div class="space-y-4">
-                            <div class="flex justify-between items-center py-2 border-b border-neutral-800">
+                            <div class="flex justify-between items-center py-2 border-b border-neutral-200">
                                 <p class="text-sm text-neutral-500">姓名</p>
                                 <div class="flex items-center gap-2">
-                                    <p id="holderName" class="text-sm text-white">-</p>
-                                    <button onclick="copyToClipboard('holderName')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
-                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <p id="holderName" class="text-sm text-neutral-900">-</p>
+                                    <button onclick="copyToClipboard('holderName')" class="p-1.5 rounded-lg hover:bg-neutral-200 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                     </button>
                                 </div>
                             </div>
-                            <div class="flex justify-between items-center py-2 border-b border-neutral-800">
+                            <div class="flex justify-between items-center py-2 border-b border-neutral-200">
                                 <p class="text-sm text-neutral-500">手机号</p>
                                 <div class="flex items-center gap-2">
-                                    <p id="phoneNumber" class="text-sm text-white">-</p>
-                                    <button onclick="copyToClipboard('phoneNumber')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
-                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <p id="phoneNumber" class="text-sm text-neutral-900">-</p>
+                                    <button onclick="copyToClipboard('phoneNumber')" class="p-1.5 rounded-lg hover:bg-neutral-200 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                     </button>
                                 </div>
                             </div>
-                            <div class="flex justify-between items-center py-2 border-b border-neutral-800">
+                            <div class="flex justify-between items-center py-2 border-b border-neutral-200">
                                 <p class="text-sm text-neutral-500">验证码</p>
                                 <div class="flex items-center gap-2">
-                                    <p id="verificationCode" class="text-sm font-mono font-bold text-white">暂无验证码</p>
-                                    <button onclick="copyToClipboard('verificationCode')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
-                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <p id="verificationCode" class="text-sm font-mono font-bold text-neutral-900">暂无验证码</p>
+                                    <button onclick="copyToClipboard('verificationCode')" class="p-1.5 rounded-lg hover:bg-neutral-200 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                     </button>
-                                    <button id="refreshCode" class="px-3 py-1.5 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-300 text-xs font-semibold hover:bg-neutral-700 transition-all">
+                                    <button id="refreshCode" class="px-3 py-1.5 rounded-lg bg-neutral-200 border border-neutral-300 text-neutral-700 text-xs font-semibold hover:bg-neutral-300 transition-all">
                                         刷新
                                     </button>
                                 </div>
                             </div>
-                            <div class="pt-4 mt-4 border-t border-neutral-800">
-                                <p id="instructionText" class="text-sm text-neutral-500 leading-relaxed">-</p>
+                            <div class="pt-4 mt-4 border-t border-neutral-200">
+                                <p id="instructionText" class="text-sm text-neutral-600 leading-relaxed">此手机号仅用于接收 3DS 与消费验证码，无法用于注册任何项目。</p>
                             </div>
                         </div>
                     </section>
 
                     <!-- 地址信息 -->
-                    <section class="relative p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800 backdrop-blur-lg">
-                        <h3 class="text-sm font-bold text-neutral-400 tracking-widest mb-5">
+                    <section class="relative p-6 rounded-2xl bg-neutral-100 border border-neutral-200">
+                        <h3 class="text-sm font-bold text-neutral-600 tracking-widest mb-5">
                             地址信息
                         </h3>
                         
                         <div class="space-y-4">
-                            <div class="flex justify-between items-start py-2 border-b border-neutral-800">
+                            <div class="flex justify-between items-start py-2 border-b border-neutral-200">
                                 <p class="text-sm text-neutral-500">完整地址</p>
                                 <div class="flex items-center gap-2">
-                                    <p id="fullAddress" class="text-sm text-white text-right max-w-xs">-</p>
-                                    <button onclick="copyToClipboard('fullAddress')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
-                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <p id="fullAddress" class="text-sm text-neutral-900 text-right max-w-xs">-</p>
+                                    <button onclick="copyToClipboard('fullAddress')" class="p-1.5 rounded-lg hover:bg-neutral-200 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                     </button>
                                 </div>
                             </div>
-                            <div class="flex justify-between items-center py-2 border-b border-neutral-800">
+                            <div class="flex justify-between items-center py-2 border-b border-neutral-200">
                                 <p class="text-sm text-neutral-500">街道</p>
                                 <div class="flex items-center gap-2">
-                                    <p id="streetAddress" class="text-sm text-white">-</p>
-                                    <button onclick="copyToClipboard('streetAddress')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
-                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <p id="streetAddress" class="text-sm text-neutral-900">-</p>
+                                    <button onclick="copyToClipboard('streetAddress')" class="p-1.5 rounded-lg hover:bg-neutral-200 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                     </button>
                                 </div>
                             </div>
-                            <div class="flex justify-between items-center py-2 border-b border-neutral-800">
+                            <div class="flex justify-between items-center py-2 border-b border-neutral-200">
                                 <p class="text-sm text-neutral-500">城市 / 邮编</p>
                                 <div class="flex items-center gap-2">
-                                    <p id="cityStateZip" class="text-sm text-white">-</p>
-                                    <button onclick="copyToClipboard('cityStateZip')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
-                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <p id="cityStateZip" class="text-sm text-neutral-900">-</p>
+                                    <button onclick="copyToClipboard('cityStateZip')" class="p-1.5 rounded-lg hover:bg-neutral-200 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                     </button>
                                 </div>
                             </div>
-                            <div class="flex justify-between items-center py-2 border-b border-neutral-800">
+                            <div class="flex justify-between items-center py-2 border-b border-neutral-200">
                                 <p class="text-sm text-neutral-500">州</p>
                                 <div class="flex items-center gap-2">
-                                    <p id="state" class="text-sm text-white">-</p>
-                                    <button onclick="copyToClipboard('state')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
-                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <p id="state" class="text-sm text-neutral-900">-</p>
+                                    <button onclick="copyToClipboard('state')" class="p-1.5 rounded-lg hover:bg-neutral-200 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                     </button>
                                 </div>
                             </div>
                             <div class="flex justify-between items-center py-2">
                                 <p class="text-sm text-neutral-500">国家</p>
                                 <div class="flex items-center gap-2">
-                                    <p id="country" class="text-sm text-white">-</p>
-                                    <button onclick="copyToClipboard('country')" class="p-1.5 rounded-lg hover:bg-neutral-800 transition-all">
-                                        <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <p id="country" class="text-sm text-neutral-900">-</p>
+                                    <button onclick="copyToClipboard('country')" class="p-1.5 rounded-lg hover:bg-neutral-200 transition-all">
+                                        <svg class="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                     </button>
                                 </div>
                             </div>
                         </div>
+
                     </section>
                 </div>
+
+                <section id="historySection" class="redeem-content p-6 rounded-2xl bg-neutral-100 border border-neutral-200 mb-6">
+                    <h3 class="text-sm font-bold text-neutral-600 tracking-widest mb-4">兑换历史</h3>
+                    <div id="localHistoryList" class="space-y-3">
+                        <p class="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-xs text-neutral-500">暂无兑换历史</p>
+                    </div>
+                </section>
             </article>
         </section>
+        </div>
     </main>
 
     <footer class="fixed bottom-4 right-4 z-40">
@@ -297,8 +1470,280 @@
         </a>
     </footer>
 
-    <script src="./app.js"></script>
+    <script src="./app.js?v=20260428-keep-card-timer"></script>
     <script>
+        // 支付链接生成相关变量和函数
+        const tokenInput = document.getElementById('tokenInput');
+        const generatePaylinkBtn = document.getElementById('generatePaylinkBtn');
+        const clearPaylinkBtn = document.getElementById('clearPaylinkBtn');
+        const paylinkResult = document.getElementById('paylinkResult');
+        
+        // 新增的元素
+        const planPreviewChip = document.getElementById('planPreviewChip');
+        const errorBox = document.getElementById('errorBox');
+        const resultBox = document.getElementById('resultBox');
+        const resultBadge = document.getElementById('resultBadge');
+        const resultJson = document.getElementById('resultJson');
+        const tokenStatus = document.getElementById('tokenStatus');
+        const tokenStatusText = document.getElementById('tokenStatusText');
+        
+        // 链接容器和文本元素
+        const stripeLinkContainer = document.getElementById('stripeLinkContainer');
+        const chatgptLinkContainer = document.getElementById('chatgptLinkContainer');
+        const openaiLinkContainer = document.getElementById('openaiLinkContainer');
+        const stripeLinkText = document.getElementById('stripeLinkText');
+        const chatgptLinkText = document.getElementById('chatgptLinkText');
+        const openaiLinkText = document.getElementById('openaiLinkText');
+        
+        // 复制和打开按钮
+        const copyStripeLinkBtn = document.getElementById('copyStripeLinkBtn');
+        const openStripeLinkBtn = document.getElementById('openStripeLinkBtn');
+        const copyChatgptLinkBtn = document.getElementById('copyChatgptLinkBtn');
+        const openChatgptLinkBtn = document.getElementById('openChatgptLinkBtn');
+        const copyOpenaiLinkBtn = document.getElementById('copyOpenaiLinkBtn');
+        const openOpenaiLinkBtn = document.getElementById('openOpenaiLinkBtn');
+        
+        let currentPlan = 'team';
+        let extractedToken = null;
+        let lastResult = null;
+        
+        // 标签页切换功能
+        const redeemTab = document.querySelector('.redeem-tab');
+        const paylinkTab = document.querySelector('.paylink-tab');
+        const redeemFormEl = document.getElementById('redeemForm');
+
+        function setSidebarTabState(element, isActive) {
+            if (!element) {
+                return;
+            }
+            element.classList.toggle('is-active', isActive);
+        }
+        
+        // 切换标签页
+        function switchTab(tabName) {
+            setSidebarTabState(redeemTab, false);
+            setSidebarTabState(paylinkTab, false);
+            
+            // 隐藏所有功能区域
+            document.querySelectorAll('.redeem-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.paylink-content').forEach(el => el.classList.add('hidden'));
+            
+            // 同步控制 paylinkForm 的显示状态
+            const paylinkFormEl = document.getElementById('paylinkForm');
+            
+            // 显示选中的标签页内容
+            if (tabName === 'redeem') {
+                setSidebarTabState(redeemTab, true);
+                document.querySelectorAll('.redeem-content').forEach(el => el.classList.remove('hidden'));
+                if (paylinkFormEl) paylinkFormEl.classList.add('hidden');
+            } else if (tabName === 'paylink') {
+                setSidebarTabState(paylinkTab, true);
+                document.querySelectorAll('.paylink-content').forEach(el => el.classList.remove('hidden'));
+                if (paylinkFormEl) paylinkFormEl.classList.remove('hidden');
+            }
+        }
+        
+        redeemTab.addEventListener('click', () => switchTab('redeem'));
+        paylinkTab.addEventListener('click', () => switchTab('paylink'));
+        
+        // 初始化显示兑卡内容
+        switchTab('redeem');
+        
+        // 计划选择功能
+        function selectPlan(plan) {
+            currentPlan = plan;
+            
+            document.querySelectorAll('.plan-card').forEach(card => {
+                const cardPlan = card.dataset.plan;
+                card.classList.toggle('active', cardPlan === plan);
+            });
+            
+            if (planPreviewChip) {
+                planPreviewChip.textContent = `当前方案：${plan === 'team' ? 'Team' : 'Plus'}`;
+            }
+        }
+        
+        // Token 自动提取和验证
+        tokenInput.addEventListener('input', function() {
+            const text = this.value.trim();
+            
+            if (!text) {
+                extractedToken = null;
+                updateTokenStatus(false, '暂未识别到 accessToken。');
+                return;
+            }
+            
+            // 尝试提取 accessToken
+            const token = extractAccessToken(text);
+            
+            if (token) {
+                extractedToken = token;
+                updateTokenStatus(true, '已识别到 accessToken ✓');
+            } else {
+                extractedToken = null;
+                updateTokenStatus(false, '暂未识别到 accessToken。');
+            }
+        });
+        
+        function extractAccessToken(text) {
+            // 尝试 JSON 格式
+            try {
+                const json = JSON.parse(text);
+                if (json.accessToken) return json.accessToken;
+            } catch (e) {}
+            
+            // 尝试从文本中提取
+            const patterns = [
+                /"accessToken"\s*:\s*"([^"]+)"/,
+                /accessToken["\s:]+([^"'\s,}]+)/,
+                /"access_token"\s*:\s*"([^"]+)"/,
+            ];
+            
+            for (const pattern of patterns) {
+                const match = text.match(pattern);
+                if (match && match[1]) {
+                    return match[1];
+                }
+            }
+            
+            // 如果文本看起来像是一个 token（以 eyJ 开头）
+            if (text.startsWith('eyJ')) {
+                return text;
+            }
+            
+            return null;
+        }
+        
+        function updateTokenStatus(isReady, message) {
+            if (tokenStatus) {
+                tokenStatus.classList.toggle('is-ready', isReady);
+            }
+            if (tokenStatusText) {
+                tokenStatusText.textContent = message;
+            }
+        }
+        
+        // 生成支付链接
+        generatePaylinkBtn.addEventListener('click', async () => {
+            const token = extractedToken || tokenInput.value.trim();
+            
+            if (!token) {
+                showError('请输入 Token');
+                return;
+            }
+            
+            // 显示加载状态
+            generatePaylinkBtn.disabled = true;
+            generatePaylinkBtn.innerHTML = '<span class="spinner w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></span><span>生成中...</span>';
+            
+            hideError();
+            hideResult();
+            
+            try {
+                const plus = currentPlan === 'plus';
+                
+                // 统一走当前站点，由 Node 服务转发到 Python 支付服务
+                const response = await fetch('/api/request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ token, plus }),
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    showSuccess(result);
+                } else {
+                    showError(result.message || '生成支付链接失败');
+                }
+            } catch (error) {
+                showError('请求失败: ' + error.message);
+            } finally {
+                generatePaylinkBtn.disabled = false;
+                generatePaylinkBtn.innerHTML = '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg><span>生成支付链接</span>';
+            }
+        });
+        
+        function showSuccess(result) {
+            lastResult = result;
+            if (resultBox) resultBox.classList.remove('hidden');
+            if (errorBox) errorBox.classList.add('hidden');
+            
+            // 显示链接卡片
+            if (stripeLinkContainer && result.Stripe_payurl) {
+                stripeLinkContainer.classList.remove('hidden');
+                stripeLinkText.textContent = result.Stripe_payurl;
+                document.getElementById('stripeLinkCard').href = result.Stripe_payurl;
+            }
+            
+            if (chatgptLinkContainer && result.chatgpt_payurl) {
+                chatgptLinkContainer.classList.remove('hidden');
+                chatgptLinkText.textContent = result.chatgpt_payurl;
+                document.getElementById('chatgptLinkCard').href = result.chatgpt_payurl;
+            }
+            
+            if (openaiLinkContainer && result.openai_payurl) {
+                openaiLinkContainer.classList.remove('hidden');
+                openaiLinkText.textContent = result.openai_payurl;
+                document.getElementById('openaiLinkCard').href = result.openai_payurl;
+            }
+            
+            // 显示 JSON
+            if (resultJson) {
+                resultJson.textContent = JSON.stringify(result, null, 2);
+            }
+        }
+        
+        function showError(message) {
+            if (errorBox) {
+                errorBox.textContent = message;
+                errorBox.classList.remove('hidden');
+            }
+            hideResult();
+        }
+        
+        function hideError() {
+            if (errorBox) {
+                errorBox.classList.add('hidden');
+            }
+        }
+        
+        function hideResult() {
+            if (resultBox) resultBox.classList.add('hidden');
+            stripeLinkContainer?.classList.add('hidden');
+            chatgptLinkContainer?.classList.add('hidden');
+            openaiLinkContainer?.classList.add('hidden');
+        }
+        
+        // 复制和打开链接功能
+        copyStripeLinkBtn?.addEventListener('click', () => copyLink(lastResult?.Stripe_payurl));
+        openStripeLinkBtn?.addEventListener('click', () => openLink(lastResult?.Stripe_payurl));
+        copyChatgptLinkBtn?.addEventListener('click', () => copyLink(lastResult?.chatgpt_payurl));
+        openChatgptLinkBtn?.addEventListener('click', () => openLink(lastResult?.chatgpt_payurl));
+        copyOpenaiLinkBtn?.addEventListener('click', () => copyLink(lastResult?.openai_payurl));
+        openOpenaiLinkBtn?.addEventListener('click', () => openLink(lastResult?.openai_payurl));
+        
+        function copyLink(url) {
+            if (!url) return;
+            fallbackCopy(url);
+        }
+        
+        function openLink(url) {
+            if (!url) return;
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+        
+        // 清空按钮
+        clearPaylinkBtn.addEventListener('click', () => {
+            tokenInput.value = '';
+            extractedToken = null;
+            updateTokenStatus(false, '暂未识别到 accessToken。');
+            hideError();
+            hideResult();
+        });
+        
         // 复制到剪贴板功能
         function copyToClipboard(elementId) {
             const element = document.getElementById(elementId);

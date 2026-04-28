@@ -13,21 +13,52 @@ A small local redemption site with a Node backend, a Notion lookup flow, and mas
 ## Files
 
 - `server.mjs`: local backend and Notion integration
+- `database.js`: CSV-backed redemption history storage
 - `index.html`, `styles.css`, `app.js`: redemption UI
 - `.env.example`: environment variable template
 
 ## Run locally
 
 1. Copy `.env.example` to `.env` and fill in your Notion values if you want live Notion mode.
-2. Start the server:
+2. Start both local services:
 
 ```bash
-node server.mjs
+./start.sh
 ```
 
 3. Open [http://localhost:8000](http://localhost:8000).
 
+4. Stop both services when finished:
+
+```bash
+./stop.sh
+```
+
+Logs are written to `logs/node.log` and `logs/python.log`.
+
+The helper script binds both services to `127.0.0.1` for local-only access.
+
+The payment-link flow now goes through `/api/request` on the Node server, which proxies the request to the Python service at `http://127.0.0.1:5001` by default. If the Python service is not running, the "生成支付链接" action will fail.
+
+You can also configure sidebar external links in `.env`:
+
+- `TUTORIAL_URL`: opens the "教程" entry in a new browser tab
+- `BUY_CARD_URL`: opens the "购卡" entry in a new browser tab
+
+If you prefer running processes manually instead of using the helper scripts:
+
+```bash
+node server.mjs
+python3 1.py
+```
+
 If no Notion variables are configured, the app falls back to demo mode. You can test with `DEMO-001`.
+
+## Redemption history storage
+
+- Redemption history is persisted to `redeem_history.csv`.
+- The CSV format is one line per record with a header row.
+- If `redeem_history.csv` does not exist but a legacy `redeem_history.db` is present, the server migrates the old SQLite history into CSV on first start.
 
 ## Recommended Notion schema
 
