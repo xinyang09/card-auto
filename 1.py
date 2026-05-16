@@ -5,7 +5,9 @@ import string
 import uuid
 import os
 from urllib.parse import quote
-from flask import Flask, request, jsonify, send_from_directory
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+from flask import Flask, request, jsonify, send_from_directory, make_response
 
 app = Flask(__name__)
 
@@ -40,12 +42,14 @@ DEFAULT_PAYMENT_PROXY_TEMPLATE = "http://1256090-2d2fc6e1:bef5bf0f-JP-{random_id
 PAYMENT_PROXY_MODE = os.getenv("PAYMENT_PROXY_MODE", "direct").strip().lower()
 PAYMENT_PROXY_TEMPLATE = os.getenv("PAYMENT_PROXY_TEMPLATE", "").strip()
 PAYMENT_REQUEST_TIMEOUT_SECONDS = read_int_env("PAYMENT_REQUEST_TIMEOUT_SECONDS", 12)
+NODE_APP_ORIGIN = os.getenv("NODE_APP_ORIGIN", "http://127.0.0.1:8000").strip().rstrip("/")
 
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Cache-Control"] = "no-store"
     return response
 
 def build_error(message, upstream_status=None, **extra):
@@ -395,6 +399,51 @@ def process_request(token, plus):
         print(f"请求失败: {e}")
         return build_error(f"请求失败: {e}")
 
+def proxy_to_node(path):
+    query_string = request.query_string.decode("utf-8")
+    target_url = f"{NODE_APP_ORIGIN}{path}"
+
+    if query_string:
+        target_url = f"{target_url}?{query_string}"
+
+    body = request.get_data() or None
+    headers = {}
+    content_type = request.headers.get("Content-Type")
+
+    if content_type:
+        headers["Content-Type"] = content_type
+
+    upstream_request = Request(
+        target_url,
+        data=body,
+        headers=headers,
+        method=request.method,
+    )
+
+    try:
+        with urlopen(upstream_request, timeout=PAYMENT_REQUEST_TIMEOUT_SECONDS) as upstream_response:
+            payload = upstream_response.read()
+            status_code = upstream_response.getcode()
+            response_content_type = upstream_response.headers.get(
+                "Content-Type",
+                "application/json; charset=utf-8",
+            )
+    except HTTPError as error:
+        payload = error.read()
+        status_code = error.code
+        response_content_type = error.headers.get(
+            "Content-Type",
+            "application/json; charset=utf-8",
+        )
+    except URLError as error:
+        reason = getattr(error, "reason", error)
+        return jsonify(build_error(f"Node 服务不可用: {reason}")), 502
+
+    response = make_response(payload, status_code)
+    response.headers["Content-Type"] = response_content_type
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
 @app.route('/api/request', methods=['POST', 'OPTIONS'])
 def api_request():
     if request.method == 'OPTIONS':
@@ -422,7 +471,21 @@ def api_request():
     status_code = 200 if result.get("status") == "success" else int(result.get("upstream_status") or 500)
     return jsonify(result), status_code
 
+@app.route('/api/redeem', methods=['POST', 'OPTIONS'])
+@app.route('/api/status', methods=['GET', 'OPTIONS'])
+@app.route('/api/history', methods=['GET', 'OPTIONS'])
+@app.route('/api/complete-info', methods=['GET', 'OPTIONS'])
+@app.route('/api/verification', methods=['GET', 'OPTIONS'])
+@app.route('/api/zipcode', methods=['GET', 'OPTIONS'])
+def proxy_node_api():
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    return proxy_to_node(request.path)
+
 @app.route('/')
+@app.route('/redeem')
+@app.route('/paylink')
 def index():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'index.html')
 

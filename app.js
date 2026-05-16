@@ -308,8 +308,12 @@ redeemForm.addEventListener("submit", async (event) => {
     
     // 根据激活时间启动1小时倒计时
     startCountdown(countdownEndsAt);
+    setMessage(payload.message || "兑换成功", "success");
+    setState("兑换成功");
   } catch (error) {
-    clearPreview({ clearStoredCard: true });
+    clearPreview({ clearStoredCard: true, resetInput: false });
+    setMessage(error.message || "兑换失败，请稍后重试。", "error");
+    setState("兑换失败");
   } finally {
     setLoading(false);
   }
@@ -588,7 +592,7 @@ function restoreCurrentCardState() {
 }
 
 function clearPreview(options = {}) {
-  const { clearStoredCard = false } = options;
+  const { clearStoredCard = false, resetInput = true } = options;
   renderPayload({
     categoryName: "-",
     isFirstAssignment: null,
@@ -610,7 +614,7 @@ function clearPreview(options = {}) {
   if (clearStoredCard) {
     clearCurrentCardState();
   }
-  if (cdkInput) {
+  if (resetInput && cdkInput) {
     cdkInput.value = "";
   }
   stopCountdown();

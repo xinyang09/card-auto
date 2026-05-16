@@ -37,11 +37,11 @@ const BUY_CARD_URL = process.env.BUY_CARD_URL || "";
 const ENABLE_TEAM_PLAN = readBooleanEnv(process.env.ENABLE_TEAM_PLAN, true);
 
 // 真实API配置
-const REAL_API_KEY = process.env.REAL_API_KEY || "";
+const REAL_API_KEY = String(process.env.REAL_API_KEY || "").replace(/\s+#.*$/, "").trim();
 const DEFAULT_REAL_API_URL = "https://card.52bankcard.com/open-api/web-api/redeem/submit";
 const REAL_API_URL = (process.env.REAL_API_URL || DEFAULT_REAL_API_URL).trim();
-const INVITER_CODE = process.env.INVITER_CODE || "";
-const DEVICE_ID = process.env.DEVICE_ID || "browser-fingerprint";
+const INVITER_CODE = String(process.env.INVITER_CODE || "").trim();
+const DEVICE_ID = String(process.env.DEVICE_ID || "browser-fingerprint").trim();
 
 const apiClient = new ApiClient();
 

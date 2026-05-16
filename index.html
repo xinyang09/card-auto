@@ -440,6 +440,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.85rem;
+            min-width: 0;
         }
         #cardViewSection > div:first-child > div {
             padding: 1rem 1rem 1.05rem;
@@ -498,8 +499,15 @@
             font-variant-numeric: tabular-nums;
         }
         #countdownTimer {
-            font-size: 1.95rem;
-            line-height: 1;
+            display: block;
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            text-align: center;
+            font-size: clamp(1.28rem, 1rem + 0.45vw, 1.5rem);
+            line-height: 1.05;
+            letter-spacing: 0.02em;
             color: #0f172a;
         }
         #infoSection {
@@ -1473,7 +1481,7 @@
         </a>
     </footer> -->
 
-    <script src="./app.js?v=20260428-keep-card-timer"></script>
+    <script src="./app.js?v=20260516-redeem-error-feedback"></script>
     <script>
         // 支付链接生成相关变量和函数
         const tokenInput = document.getElementById('tokenInput');
