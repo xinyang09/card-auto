@@ -8,6 +8,7 @@ const setupHint = document.getElementById("setupHint");
 const localHistoryList = document.getElementById("localHistoryList");
 const tutorialLink = document.getElementById("tutorialLink");
 const buyCardLink = document.getElementById("buyCardLink");
+const genStateSelect = document.getElementById("genStateSelect");
 const DEFAULT_INSTRUCTION_TEXT = "此手机号仅用于接收 3DS 与消费验证码，无法用于注册任何项目。";
 const CURRENT_CARD_KEY = "card_current_card";
 
@@ -686,26 +687,26 @@ function formatDate(input) {
 
 // 美国地址生成器
 const US_STATES = [
-  { name: 'California', abbr: 'CA' },
-  { name: 'Texas', abbr: 'TX' },
-  { name: 'Florida', abbr: 'FL' },
-  { name: 'New York', abbr: 'NY' },
-  { name: 'Pennsylvania', abbr: 'PA' },
-  { name: 'Illinois', abbr: 'IL' },
-  { name: 'Ohio', abbr: 'OH' },
-  { name: 'Georgia', abbr: 'GA' },
-  { name: 'North Carolina', abbr: 'NC' },
-  { name: 'Michigan', abbr: 'MI' },
-  { name: 'New Jersey', abbr: 'NJ' },
-  { name: 'Virginia', abbr: 'VA' },
-  { name: 'Washington', abbr: 'WA' },
-  { name: 'Arizona', abbr: 'AZ' },
-  { name: 'Massachusetts', abbr: 'MA' },
-  { name: 'Tennessee', abbr: 'TN' },
-  { name: 'Indiana', abbr: 'IN' },
-  { name: 'Missouri', abbr: 'MO' },
-  { name: 'Maryland', abbr: 'MD' },
-  { name: 'Wisconsin', abbr: 'WI' }
+  { name: 'California', abbr: 'CA', cities: ['Los Angeles', 'San Diego', 'San Jose', 'San Francisco'] },
+  { name: 'Texas', abbr: 'TX', cities: ['Houston', 'Dallas', 'Austin', 'San Antonio'] },
+  { name: 'Florida', abbr: 'FL', cities: ['Jacksonville', 'Miami', 'Orlando', 'Tampa'] },
+  { name: 'New York', abbr: 'NY', cities: ['New York', 'Buffalo', 'Rochester', 'Albany'] },
+  { name: 'Pennsylvania', abbr: 'PA', cities: ['Philadelphia', 'Pittsburgh', 'Allentown', 'Harrisburg'] },
+  { name: 'Illinois', abbr: 'IL', cities: ['Chicago', 'Aurora', 'Naperville', 'Springfield'] },
+  { name: 'Ohio', abbr: 'OH', cities: ['Columbus', 'Cleveland', 'Cincinnati', 'Toledo'] },
+  { name: 'Georgia', abbr: 'GA', cities: ['Atlanta', 'Augusta', 'Savannah', 'Columbus'] },
+  { name: 'North Carolina', abbr: 'NC', cities: ['Charlotte', 'Raleigh', 'Greensboro', 'Durham'] },
+  { name: 'Michigan', abbr: 'MI', cities: ['Detroit', 'Grand Rapids', 'Ann Arbor', 'Lansing'] },
+  { name: 'New Jersey', abbr: 'NJ', cities: ['Newark', 'Jersey City', 'Paterson', 'Trenton'] },
+  { name: 'Virginia', abbr: 'VA', cities: ['Virginia Beach', 'Richmond', 'Norfolk', 'Alexandria'] },
+  { name: 'Washington', abbr: 'WA', cities: ['Seattle', 'Spokane', 'Tacoma', 'Bellevue'] },
+  { name: 'Arizona', abbr: 'AZ', cities: ['Phoenix', 'Tucson', 'Mesa', 'Scottsdale'] },
+  { name: 'Massachusetts', abbr: 'MA', cities: ['Boston', 'Worcester', 'Springfield', 'Cambridge'] },
+  { name: 'Tennessee', abbr: 'TN', cities: ['Nashville', 'Memphis', 'Knoxville', 'Chattanooga'] },
+  { name: 'Indiana', abbr: 'IN', cities: ['Indianapolis', 'Fort Wayne', 'Evansville', 'Bloomington'] },
+  { name: 'Missouri', abbr: 'MO', cities: ['Kansas City', 'St. Louis', 'Springfield', 'Columbia'] },
+  { name: 'Maryland', abbr: 'MD', cities: ['Baltimore', 'Annapolis', 'Frederick', 'Rockville'] },
+  { name: 'Wisconsin', abbr: 'WI', cities: ['Milwaukee', 'Madison', 'Green Bay', 'Kenosha'] }
 ];
 
 const FIRST_NAMES = ['James', 'John', 'Robert', 'Michael', 'William', 'David', 'Richard', 'Joseph', 'Thomas', 'Charles', 'Mary', 'Patricia', 'Jennifer', 'Linda', 'Barbara', 'Elizabeth', 'Susan', 'Jessica', 'Sarah', 'Karen', 'Lisa'];
@@ -713,17 +714,48 @@ const LAST_NAMES = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 
 const STREETS = ['Main St', 'Oak Ave', 'Maple Dr', 'Cedar Ln', 'Pine Rd', 'Elm St', 'Washington Blvd', 'Park Ave', 'Lake Dr', 'Hill Rd', 'River Rd', 'Forest Ave', 'Sunset Blvd', 'Valley Rd', 'Church St'];
 const CITIES = ['Los Angeles', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Jacksonville', 'Fort Worth', 'Columbus', 'Charlotte', 'San Francisco', 'Indianapolis', 'Seattle', 'Denver', 'Washington', 'Boston', 'Nashville'];
 
+function populateAddressStateOptions() {
+  if (!genStateSelect) {
+    return;
+  }
+
+  const optionsMarkup = [
+    '<option value="">随机州</option>',
+    ...US_STATES.map((state) => `<option value="${state.abbr}">${state.name} (${state.abbr})</option>`),
+  ].join('');
+
+  genStateSelect.innerHTML = optionsMarkup;
+}
+
+function getSelectedAddressState() {
+  if (!genStateSelect) {
+    return null;
+  }
+
+  const selectedAbbr = String(genStateSelect.value || '').trim();
+  if (!selectedAbbr) {
+    return null;
+  }
+
+  return US_STATES.find((state) => state.abbr === selectedAbbr) || null;
+}
+
+function pickRandomItem(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
 function generateRandomAddress() {
   const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
   const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
   const streetNum = Math.floor(Math.random() * 9999) + 1;
   const street = STREETS[Math.floor(Math.random() * STREETS.length)];
-  const state = US_STATES[Math.floor(Math.random() * US_STATES.length)];
+  const state = getSelectedAddressState() || pickRandomItem(US_STATES);
   const zip = Math.floor(Math.random() * 90000) + 10000;
   
   const fullName = `${firstName} ${lastName}`;
   const streetAddress = `${streetNum} ${street}`;
-  const city = CITIES[Math.floor(Math.random() * CITIES.length)];
+  const cityPool = state.cities?.length ? state.cities : CITIES;
+  const city = pickRandomItem(cityPool);
   const fullAddress = `${streetAddress}, ${city} ${state.abbr} ${zip}, US`;
   
   document.getElementById('genName').textContent = fullName;
@@ -733,6 +765,8 @@ function generateRandomAddress() {
   document.getElementById('genZip').textContent = zip;
   document.getElementById('genFullAddress').textContent = fullAddress;
 }
+
+populateAddressStateOptions();
 
 function safeText(input) {
   const text = String(input || "").trim();

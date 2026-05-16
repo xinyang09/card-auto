@@ -485,6 +485,7 @@ def proxy_node_api():
 
 @app.route('/')
 @app.route('/redeem')
+@app.route('/address')
 @app.route('/paylink')
 def index():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'index.html')

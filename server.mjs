@@ -18,7 +18,7 @@ const DEMO_MODE = String(process.env.DEMO_MODE || "").toLowerCase() === "true";
 const DEFAULT_PAYMENT_SERVICE_ORIGIN = IS_DOCKER
   ? "http://payment-python:5001,http://card-auto-payment-python:5001"
   : "http://127.0.0.1:5001";
-const SPA_ROUTE_PATHS = new Set(["/", "/redeem", "/paylink"]);
+const SPA_ROUTE_PATHS = new Set(["/", "/redeem", "/address", "/paylink"]);
 const PAYMENT_SERVICE_ORIGINS = parseServiceOrigins(
   process.env.PAYMENT_SERVICE_ORIGIN || DEFAULT_PAYMENT_SERVICE_ORIGIN,
 );
